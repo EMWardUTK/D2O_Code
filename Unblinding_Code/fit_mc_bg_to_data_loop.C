@@ -9,6 +9,7 @@
 #include <TRandom3.h>
 #include <TLatex.h>
 #include <TF1.h>
+#include "TH1.h"
 #include "Fit/Fitter.h"
 #include "Math/Functor.h"
 #include "TMath.h"
@@ -17,6 +18,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <cmath>
+#include <filesystem>
 
 using std::cout; 
 using std::endl;
@@ -27,6 +30,8 @@ using std::ifstream;
 TH2D* g_hist_vD = nullptr;   // MC: Neutrino-Deuterium
 TH2D* g_hist_vO = nullptr;   // MC: Neutrino-Oxygen
 TH2D* g_hist_BRN = nullptr;  // MC: Beam-Related Neutrons
+TH2D* g_hist_vFe = nullptr;  // MC: Neutrino-Iron
+TH2D* g_hist_vPb = nullptr;  // MC: Neutrino-Lead
 TH2D* g_hist_SSB = nullptr;  // RD: Steady-State Background
 TH2D* g_target = nullptr;    // Pseudo-Real Data: MC & SSB Events
 
@@ -45,7 +50,9 @@ double ChiSquaredFCN(const double* p) {
             double mc_sum = p[0] * g_hist_vD->GetBinContent(ix, iy) + 
                             p[1] * g_hist_vO->GetBinContent(ix, iy) + 
                             p[2] * g_hist_BRN->GetBinContent(ix, iy) +
-                            p[3] * g_hist_SSB->GetBinContent(ix, iy);
+                            p[3] * g_hist_vFe->GetBinContent(ix, iy) +
+                            p[4] * g_hist_vPb->GetBinContent(ix, iy) +
+                            p[5] * g_hist_SSB->GetBinContent(ix, iy);
             
             // Real data value and error
             double data_val = g_target->GetBinContent(ix, iy);
@@ -96,7 +103,9 @@ double NegLogLikelihoodFCN(const double* p) {
             double mu = p[0] * g_hist_vD->GetBinContent(ix, iy) + 
                         p[1] * g_hist_vO->GetBinContent(ix, iy) + 
                         p[2] * g_hist_BRN->GetBinContent(ix, iy) +
-                        p[3] * g_hist_SSB->GetBinContent(ix, iy);
+                        p[3] * g_hist_vFe->GetBinContent(ix, iy) +
+                        p[4] * g_hist_vPb->GetBinContent(ix, iy) +
+                        p[5] * g_hist_SSB->GetBinContent(ix, iy);
             
             // Observed count (data)
             double n = g_target->GetBinContent(ix, iy);
@@ -124,6 +133,51 @@ void fit_mc_bg_to_data_loop() {
     int emin = 0;
     int emax = 500;
 
+    // Define dimensions of event rate histograms
+    int vDbins = 60;
+    int vDmin = 300;
+    int vDmax = 900;
+    int vObins = 50;
+    int vOmin = -100;
+    int vOmax = 400;
+    int BRNbins = 40;
+    int BRNmin = 0;
+    int BRNmax = 400;
+    int vFebins = 60;
+    int vFemin = -100;
+    int vFemax = 500;
+    int vPbbins = 40;
+    int vPbmin = 0;
+    int vPbmax = 400;
+    int SSBbins = 60;
+    int SSBmin = 1400;
+    int SSBmax = 2000;
+    int NLLbins = 100;
+    int NLLmin = -20;
+    int NLLmax = -10;
+
+    // Define number of events in target
+    int vDnum = 615;
+    int vOnum = 95;
+    int BRNnum = 206;
+    int vFenum = 132;
+    int vPbnum = 215;
+    int SSBnum = 1679;
+
+    // Define selection cuts
+    int minEnergy = 50;
+    int maxEnergy = 500;
+
+    int sel_cut_case = 3;
+    // 1: >=50phe, <= 500phe, mult >= 10
+    if (sel_cut_case == 1) {vDnum = 615; vOnum = 95; BRNnum = 206; vFenum = 132; vPbnum = 215; minEnergy = 50; maxEnergy = 500; emax = 500; BRNbins = 40; BRNmin = 0; BRNmax = 400; vPbbins = 40; vPbmin = 0; vPbmax = 400; SSBbins = 60; SSBmin = 1400; SSBmax = 2000; NLLbins = 100; NLLmin = -20; NLLmax = -10;}
+    // 2: >=30phe, <= 500phe, mult >= 10
+    if (sel_cut_case == 2) {vDnum = 620; vOnum = 104; BRNnum = 717; vFenum = 161; vPbnum = 530; minEnergy = 30; maxEnergy = 500; emax = 500; BRNbins = 40; BRNmin = 500; BRNmax = 900; vPbbins = 40; vPbmin = 350; vPbmax = 750; SSBbins = 60; SSBmin = 3200; SSBmax = 3800; NLLbins = 100; NLLmin = -55; NLLmax = -45;}
+    // 3: >=50phe, <= 600phe, mult >= 10
+    if (sel_cut_case == 3) {vDnum = 618; vOnum = 95; BRNnum = 206; vFenum = 133; vPbnum = 215; minEnergy = 50; maxEnergy = 600; emax = 600; BRNbins = 40; BRNmin = 0; BRNmax = 400; vPbbins = 40; vPbmin = 0; vPbmax = 400; SSBbins = 60; SSBmin = 1400; SSBmax = 2000; NLLbins = 100; NLLmin = -20; NLLmax = -10;}
+    // 4: >=50phe, <= 500phe, mult == 12
+    if (sel_cut_case == 4) {vDnum = 611; vOnum = 92; BRNnum = 157; vFenum = 126; vPbnum = 175; minEnergy = 50; maxEnergy = 500; emax = 500; BRNbins = 40; BRNmin = 0; BRNmax = 400; vPbbins = 40; vPbmin = 0; vPbmax = 400; SSBbins = 60; SSBmin = 900; SSBmax = 1500; NLLbins = 100; NLLmin = -15; NLLmax = -5;}
+
     // Define function to be minimized
     int fit_method = 2;
 
@@ -131,29 +185,37 @@ void fit_mc_bg_to_data_loop() {
     g_hist_vD = new TH2D("h_vD", "Neutrino-Deuterium Time vs Energy Distributions", tbins, tmin, tmax, ebins, emin, emax);
     g_hist_vO = new TH2D("h_vO", "Neutrino-Oxygen Time vs Energy Distributions", tbins, tmin, tmax, ebins, emin, emax);
     g_hist_BRN = new TH2D("h_BRN", "Beam-Related Neutrons Time vs Energy Distributions", tbins, tmin, tmax, ebins, emin, emax);
+    g_hist_vFe = new TH2D("h_vFe", "Neutrino-Iron Time vs Energy Distributions", tbins, tmin, tmax, ebins, emin, emax);
+    g_hist_vPb = new TH2D("h_vPb", "Neutrino-Lead Time vs Energy Distributions", tbins, tmin, tmax, ebins, emin, emax);
     g_hist_SSB = new TH2D("h_SSB", "Out-of-Beam-Window Steady State Background Time vs Energy Distributions", tbins, tmin, tmax, ebins, emin, emax);
 
     TH2D* h_fitted_2D = new TH2D("h_fitted_2D", "Fitted MC (weighted sum)", tbins, tmin, tmax, ebins, emin, emax);
 
-    TH1D* h_vD_num = new TH1D("h_vD_num", "Number of vD Events Found", 60, 300, 900);
-    TH1D* h_vO_num = new TH1D("h_vO_num", "Number of vO Events Found", 35, -50, 300);
-    TH1D* h_BRN_num = new TH1D("h_BRN_num", "Number of BRN Events Found", 30, 0, 300);
-    TH1D* h_SSB_num = new TH1D("h_SSB_num", "Number of SSB Events Found", 60, 1400, 2000);
+    TH1D* h_vD_num = new TH1D("h_vD_num", "Number of vD Events Found", vDbins, vDmin, vDmax);
+    TH1D* h_vO_num = new TH1D("h_vO_num", "Number of vO Events Found", vObins, vOmin, vOmax);
+    TH1D* h_BRN_num = new TH1D("h_BRN_num", "Number of BRN Events Found", BRNbins, BRNmin, BRNmax);
+    TH1D* h_vFe_num = new TH1D("h_vFe_num", "Number of vFe Events Found", vFebins, vFemin, vFemax);
+    TH1D* h_vPb_num = new TH1D("h_vPb_num", "Number of vPb Events Found", vPbbins, vPbmin, vPbmax);
+    TH1D* h_SSB_num = new TH1D("h_SSB_num", "Number of SSB Events Found", SSBbins, SSBmin, SSBmax);
 
-    TH2D* h_vD_vO = new TH2D("h_vD_vO", "vD vs vO Recovered Event Rates", 60, 300, 900, 30, 0, 300);
-    TH2D* h_vD_BRN = new TH2D("h_vD_BRN", "vD vs BRN Recovered Event Rates", 60, 300, 900, 30, 0, 300);
-    TH2D* h_vD_SSB = new TH2D("h_vD_SSB", "vD vs SSB Recovered Event Rates", 60, 300, 900, 60, 1400, 2000);
-    TH2D* h_vO_BRN = new TH2D("h_vO_BRN", "vO vs BRN Recovered Event Rates", 30, 0, 300, 30, 0, 300);
-    TH2D* h_vO_SSB = new TH2D("h_vO_SSB", "vO vs SSB Recovered Event Rates", 30, 0, 300, 60, 1400, 2000);
-    TH2D* h_BRN_SSB = new TH2D("h_BRN_SSB", "BRN vs SSB Recovered Event Rates", 30, 0, 300, 60, 1400, 2000);
+    TH2D* h_vD_vO = new TH2D("h_vD_vO", "vD vs vO Recovered Event Rates", vDbins, vDmin, vDmax, vObins, vOmin, vOmax);
+    TH2D* h_vD_BRN = new TH2D("h_vD_BRN", "vD vs BRN Recovered Event Rates", vDbins, vDmin, vDmax, BRNbins, BRNmin, BRNmax);
+    TH2D* h_vD_SSB = new TH2D("h_vD_SSB", "vD vs SSB Recovered Event Rates", vDbins, vDmin, vDmax, SSBbins, SSBmin, SSBmax);
+    TH2D* h_vO_BRN = new TH2D("h_vO_BRN", "vO vs BRN Recovered Event Rates", vObins, vOmin, vOmax, BRNbins, BRNmin, BRNmax);
+    TH2D* h_vO_SSB = new TH2D("h_vO_SSB", "vO vs SSB Recovered Event Rates", vObins, vOmin, vOmax, SSBbins, SSBmin, SSBmax);
+    TH2D* h_BRN_SSB = new TH2D("h_BRN_SSB", "BRN vs SSB Recovered Event Rates", BRNbins, BRNmin, BRNmax, SSBbins, SSBmin, SSBmax);
 
     TH1D* h_chi2_per_ndf;
     if (fit_method == 1) {h_chi2_per_ndf = new TH1D("h_chi2_per_ndf", "Chi-Squared per Degrees of Freedom", 20, 0, 2);}
-    if (fit_method == 2) {h_chi2_per_ndf = new TH1D("h_chi2_per_ndf", "Negative Log-Likelihood per Bins Used", 50, -15, -10);}
+    if (fit_method == 2) {h_chi2_per_ndf = new TH1D("h_chi2_per_ndf", "Negative Log-Likelihood per Bins Used", NLLbins, NLLmin, NLLmax);}
 
     TH2D* h_background_true = new TH2D("h_background_true", "Out-of-Beam-Window Steady State Background Data", tbins, tmin, tmax, ebins, emin, emax);
-    TH1D* h_bg_stats = new TH1D("h_bg_stats", "Number of Background Events Put into Target", 100, 1400, 2000);
-    TH2D* h_bg_vO_trend = new TH2D("h_bg_vO_trend", "Number of Background Events in Target vs Recovered Number of vO Events", 100, 1400, 2000, 30, 0, 300);
+    TH1D* h_bg_stats = new TH1D("h_bg_stats", "Number of Background Events Put into Target", SSBbins, SSBmin, SSBmax);
+    TH2D* h_bg_vO_trend = new TH2D("h_bg_vO_trend", "Number of Background Events in Target vs Recovered Number of vO Events", SSBbins, SSBmin, SSBmax, vObins, vOmin, vOmax);
+    TH1D* h_bg_energy = new TH1D("h_bg_energy", "Out-of-Beam-Window Steady State Background Energy", ebins, emin, emax);
+    TH1D* h_sg_energy = new TH1D("h_sg_energy", "In-Beam Window Signal Energy", ebins, emin, emax);
+
+    std::filesystem::create_directory("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots");
 
     int max_loop = 1000;
     int min_loop = 0;
@@ -180,8 +242,12 @@ void fit_mc_bg_to_data_loop() {
         g_hist_vD->Reset();
         g_hist_vO->Reset();
         g_hist_BRN->Reset();
+        g_hist_vFe->Reset();
+        g_hist_vPb->Reset();
         g_hist_SSB->Reset();
         h_background_true->Reset();
+        h_bg_energy->Reset();
+        h_sg_energy->Reset();
         bg_time.clear();
         bg_energy.clear();
     
@@ -215,7 +281,7 @@ void fit_mc_bg_to_data_loop() {
         string intval1;
 
         // Read from the text file
-        ifstream ReadTextFile1("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/SNS_v_Time_Dist_1M_1.txt");
+        ifstream ReadTextFile1("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/SNS_v_Time_Dist_1M_10us_1.txt");
 
         // Use a while loop together with the getline() function to read the file line by line
         while (getline(ReadTextFile1, intval1)) {
@@ -233,7 +299,7 @@ void fit_mc_bg_to_data_loop() {
         int randVal1 = std::round(rng.Gaus(randMean, randSigma));
 
         std::vector<double> rand_vD_val;
-        for(int iRand = 0; iRand < 627 + randVal1; iRand++) {
+        for(int iRand = 0; iRand < vDnum + randVal1; iRand++) {
             rand_vD_val.push_back(std::round(rng.Uniform(0.0, (t1->GetEntries()) * 0.98)));
         }
         
@@ -241,17 +307,18 @@ void fit_mc_bg_to_data_loop() {
         for(int iEvent = 0; iEvent < t1->GetEntries(); iEvent++){
             Long64_t tentry1 = t1->LoadTree(iEvent);
             b_numHits->GetEntry(tentry1);
-            if (numHits > 50 && numHits < 500) {
+            if (numHits > minEnergy && numHits < maxEnergy) {
                 if (std::find(rand_vD_val.begin(), rand_vD_val.end(), count) != rand_vD_val.end()) {
                     g_target->Fill(vD_time_dist[iEvent], numHits);
+                    h_sg_energy->Fill(numHits);
                 }
                 else {
                     g_hist_vD->Fill(vD_time_dist[iEvent], numHits);
                 }
-                /*if (count >= iLoop * 650 && count < iLoop * 650 + 627 + randVal1) {
+                /*if (count >= iLoop * 650 && count < iLoop * 650 + vDnum + randVal1) {
                     g_target->Fill(vD_time_dist[iEvent], numHits);
                 }
-                else if (count < iLoop * 650 || count >= iLoop * 650 + 627 + randVal1) {
+                else if (count < iLoop * 650 || count >= iLoop * 650 + vDnum + randVal1) {
                     g_hist_vD->Fill(vD_time_dist[iEvent], numHits);
                 }*/
                 count += 1;
@@ -260,6 +327,7 @@ void fit_mc_bg_to_data_loop() {
         
         // cout << "  Loaded " << t1->GetEntries() << " events into h_vD" << endl;
         // cout << "  Histogram integral: " << g_hist_vD->Integral() << endl;
+        // cout << "  h_sg_energy integral: " << h_sg_energy->Integral() << endl;
         
         f1->Close();
         delete f1;
@@ -290,7 +358,7 @@ void fit_mc_bg_to_data_loop() {
         string intval2;
 
         // Read from the text file
-        ifstream ReadTextFile2("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/SNS_v_Time_Dist_1M_2.txt");
+        ifstream ReadTextFile2("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/SNS_v_Time_Dist_1M_10us_2.txt");
 
         // Use a while loop together with the getline() function to read the file line by line
         while (getline(ReadTextFile2, intval2)) {
@@ -305,7 +373,7 @@ void fit_mc_bg_to_data_loop() {
         int randVal2 = std::round(rng.Gaus(randMean, randSigma));
 
         std::vector<double> rand_vO_val;
-        for(int iRand = 0; iRand < 114 + randVal2; iRand++) {
+        for(int iRand = 0; iRand < vOnum + randVal2; iRand++) {
             rand_vO_val.push_back(std::round(rng.Uniform(0.0, (t2->GetEntries()) * 0.82)));
         }
 
@@ -313,17 +381,18 @@ void fit_mc_bg_to_data_loop() {
         for(int iEvent = 0; iEvent < t2->GetEntries(); iEvent++){
             Long64_t tentry2 = t2->LoadTree(iEvent);
             b_numHits->GetEntry(tentry2);
-            if (numHits > 50 && numHits < 500) {
+            if (numHits > minEnergy && numHits < maxEnergy) {
                 if (std::find(rand_vO_val.begin(), rand_vO_val.end(), count) != rand_vO_val.end()) {
                     g_target->Fill(vO_time_dist[iEvent], numHits);
+                    h_sg_energy->Fill(numHits);
                 }
                 else {
                     g_hist_vO->Fill(vO_time_dist[iEvent], numHits);
                 }
-                /*if (count >= iLoop * 650 && count < iLoop * 650 + 114 + randVal2) {
+                /*if (count >= iLoop * 650 && count < iLoop * 650 + vOnum + randVal2) {
                     g_target->Fill(vO_time_dist[iEvent], numHits);
                 }
-                else if (count < iLoop * 650 || count >= iLoop * 650 + 114 + randVal2) {
+                else if (count < iLoop * 650 || count >= iLoop * 650 + vOnum + randVal2) {
                     g_hist_vO->Fill(vO_time_dist[iEvent], numHits);
                 }*/
                 count += 1;
@@ -332,6 +401,7 @@ void fit_mc_bg_to_data_loop() {
         
         // cout << "  Loaded " << t2->GetEntries() << " events into h_vO" << endl;
         // cout << "  Histogram integral: " << g_hist_vO->Integral() << endl;
+        // cout << "  h_sg_energy integral: " << h_sg_energy->Integral() << endl;
         
         f2->Close();
         delete f2;
@@ -340,10 +410,12 @@ void fit_mc_bg_to_data_loop() {
         // LOAD MC HISTOGRAM 3: Beam-Related Neutrons (BRN)
         // ===================================================================
         // cout << "\nLoading MC data: Beam-Related Neutrons..." << endl;
-        
-        TFile *f3 = new TFile("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/BRN_40MeV_151k.root");
+
+        TFile *f3;
+        if (sel_cut_case == 2) {f3 = new TFile("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/BRN_40MeV_150k_30phe.root");}
+        else {f3 = new TFile("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/BRN_40MeV_151k.root");}
         if (!f3 || f3->IsZombie()) {
-            cout << "Error: Could not open BRN_40MeV_151k.root" << endl;
+            cout << "Error: Could not open BRN ROOT file" << endl;
             return;
         }
         
@@ -377,7 +449,7 @@ void fit_mc_bg_to_data_loop() {
         int randVal3 = std::round(rng.Gaus(randMean, randSigma));
 
         std::vector<double> rand_BRN_val;
-        for(int iRand = 0; iRand < 130 + randVal3; iRand++) {
+        for(int iRand = 0; iRand < BRNnum + randVal3; iRand++) {
             rand_BRN_val.push_back(std::round(rng.Uniform(0.0, (t3->GetEntries()) * 0.93)));
         }
 
@@ -385,17 +457,17 @@ void fit_mc_bg_to_data_loop() {
         for(int iEvent = 0; iEvent < t3->GetEntries(); iEvent++){
             Long64_t tentry3 = t3->LoadTree(iEvent);
             b_numHits->GetEntry(tentry3);
-            if (numHits > 50 && numHits < 500) {
+            if (numHits > minEnergy && numHits < maxEnergy) {
                 if (std::find(rand_BRN_val.begin(), rand_BRN_val.end(), count) != rand_BRN_val.end()) {
                     g_target->Fill(BRN_time_dist[iEvent], numHits);
                 }
                 else {
                     g_hist_BRN->Fill(BRN_time_dist[iEvent], numHits);
                 }
-                /*if (count >= iLoop * 150 && count < iLoop * 150 + 130 + randVal3) {
+                /*if (count >= iLoop * 150 && count < iLoop * 150 + BRNnum + randVal3) {
                     g_target->Fill(BRN_time_dist[iEvent], numHits);
                 }
-                else if (count < iLoop * 150 || count >= iLoop * 150 + 130 + randVal3) {
+                else if (count < iLoop * 150 || count >= iLoop * 150 + BRNnum + randVal3) {
                     g_hist_BRN->Fill(BRN_time_dist[iEvent], numHits);
                 }*/
                 count += 1;
@@ -407,14 +479,170 @@ void fit_mc_bg_to_data_loop() {
         
         f3->Close();
         delete f3;
+
+        // ===================================================================
+        // LOAD MC HISTOGRAM 4: Neutrino-Iron (vFe)
+        // ===================================================================
+        // cout << "\nLoading MC data: Neutrino-Iron..." << endl;
+        
+        TFile *f4 = new TFile("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/nuFe_100k.root");
+        if (!f4 || f4->IsZombie()) {
+            cout << "Error: Could not open nuFe_100k.root" << endl;
+            return;
+        }
+        
+        TTree* t4 = (TTree*)f4->Get("Sim_Tree");
+        if (!t4) {
+            cout << "Error: Could not find tree Sim_Tree" << endl;
+            return;
+        }
+        
+        // Int_t numHits;
+        // TBranch *b_numHits;
+        t4->SetBranchAddress("numHits", &numHits, &b_numHits);
+        
+        // Create a text string, which is used to output the text file
+        std::vector<int> vFe_time_dist;
+        string intval4;
+
+        // Read from the text file
+        ifstream ReadTextFile4("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/SNS_v_Time_Dist_1M_10us_3.txt");
+
+        // Use a while loop together with the getline() function to read the file line by line
+        while (getline(ReadTextFile4, intval4)) {
+            // Output the text from the file
+            vFe_time_dist.push_back(stod(intval4));
+        }
+
+        // Close the file
+        ReadTextFile4.close();
+        ReadTextFile4.clear();
+
+        int randVal4 = std::round(rng.Gaus(randMean, randSigma));
+
+        std::vector<double> rand_vFe_val;
+        for(int iRand = 0; iRand < vFenum + randVal4; iRand++) {
+            rand_vFe_val.push_back(std::round(rng.Uniform(0.0, (t4->GetEntries()) * 0.23)));
+        }
+        
+        count = 0;
+        for(int iEvent = 0; iEvent < t4->GetEntries(); iEvent++){
+            Long64_t tentry4 = t4->LoadTree(iEvent);
+            b_numHits->GetEntry(tentry4);
+            if (numHits > minEnergy && numHits < maxEnergy) {
+                if (std::find(rand_vFe_val.begin(), rand_vFe_val.end(), count) != rand_vFe_val.end()) {
+                    g_target->Fill(vFe_time_dist[iEvent], numHits);
+                    h_sg_energy->Fill(numHits);
+                }
+                else {
+                    g_hist_vFe->Fill(vFe_time_dist[iEvent], numHits);
+                }
+                /*if (count >= iLoop * 150 && count < iLoop * 150 + vFenum + randVal4) {
+                    g_target->Fill(vFe_time_dist[iEvent], numHits);
+                }
+                else if (count < iLoop * 150 || count >= iLoop * 150 + vFenum + randVal4) {
+                    g_hist_vFe->Fill(vFe_time_dist[iEvent], numHits);
+                }*/
+                count += 1;
+            }
+        }
+        
+        // cout << "  Loaded " << t4->GetEntries() << " events into h_vFe" << endl;
+        // cout << "  Histogram integral: " << g_hist_vFe->Integral() << endl;
+        // cout << "  h_sg_energy integral: " << h_sg_energy->Integral() << endl;
+        
+        f4->Close();
+        delete f4;
+
+        // ===================================================================
+        // LOAD MC HISTOGRAM 5: Neutrino-Lead (vPb)
+        // ===================================================================
+        // cout << "\nLoading MC data: Neutrino-Lead..." << endl;
+        
+        TFile *f5 = new TFile("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/nuPb_1M.root");
+        if (!f5 || f5->IsZombie()) {
+            cout << "Error: Could not open nuPb_1M.root" << endl;
+            return;
+        }
+        
+        TTree* t5 = (TTree*)f5->Get("Sim_Tree");
+        if (!t5) {
+            cout << "Error: Could not find tree Sim_Tree" << endl;
+            return;
+        }
+        
+        // Int_t numHits;
+        // TBranch *b_numHits;
+        t5->SetBranchAddress("numHits", &numHits, &b_numHits);
+        
+        // Create a text string, which is used to output the text file
+        std::vector<int> vPb_time_dist;
+        string intval5;
+
+        // Read from the text file
+        ifstream ReadTextFile5("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/Data_MC_Comp/SNS_v_Time_Dist_1M_10us_4.txt");
+
+        // Use a while loop together with the getline() function to read the file line by line
+        while (getline(ReadTextFile5, intval5)) {
+            // Output the text from the file
+            vPb_time_dist.push_back(stod(intval5));
+        }
+
+        // Close the file
+        ReadTextFile5.close();
+        ReadTextFile5.clear();
+
+        int randVal5 = std::round(rng.Gaus(randMean, randSigma));
+
+        std::vector<double> rand_vPb_val;
+        for(int iRand = 0; iRand < vPbnum + randVal5; iRand++) {
+            rand_vPb_val.push_back(std::round(rng.Uniform(0.0, (t5->GetEntries()) * 0.010)));
+        }
+        
+        count = 0;
+        for(int iEvent = 0; iEvent < t5->GetEntries(); iEvent++){
+            Long64_t tentry5 = t5->LoadTree(iEvent);
+            b_numHits->GetEntry(tentry5);
+            if (numHits > minEnergy && numHits < maxEnergy) {
+                if (std::find(rand_vPb_val.begin(), rand_vPb_val.end(), count) != rand_vPb_val.end()) {
+                    g_target->Fill(vPb_time_dist[iEvent], numHits);
+                    h_sg_energy->Fill(numHits);
+                }
+                else {
+                    g_hist_vPb->Fill(vPb_time_dist[iEvent], numHits);
+                }
+                /*if (count >= iLoop * 250 && count < iLoop * 250 + vPbnum + randVal5) {
+                    g_target->Fill(vPb_time_dist[iEvent], numHits);
+                }
+                else if (count < iLoop * 250 || count >= iLoop * 250 + vPbnum + randVal5) {
+                    g_hist_vPb->Fill(vPb_time_dist[iEvent], numHits);
+                }*/
+                count += 1;
+            }
+        }
+        
+        // cout << "  Loaded " << t5->GetEntries() << " events into h_vPb" << endl;
+        // cout << "  Histogram integral: " << g_hist_vPb->Integral() << endl;
+        // cout << "  h_sg_energy integral: " << h_sg_energy->Integral() << endl;
+        
+        f5->Close();
+        delete f5;
         
         // ===================================================================
         // LOAD REAL DATA HISTOGRAM: Steady State Background (SSB)
         // ===================================================================
         // cout << "\nLoading real data: Background Events..." << endl;
 
-        // Read from the first text file
-        ifstream ReadBackgroundFile("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/2026/mar_25/week_mar_23/background_int_dt_txt_files/Background_Int_dt_4216.txt");
+        // Read from the background data text file
+        ifstream ReadBackgroundFile;
+        if (sel_cut_case == 1) {ReadBackgroundFile.open("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/2026/mar_26/week_mar_23/background_int_dt_txt_files/Background_Int_dt_4216_standard.txt");}
+        else if (sel_cut_case == 2) {ReadBackgroundFile.open("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/2026/mar_26/week_mar_23/background_int_dt_txt_files/Background_Int_dt_4216_30phe.txt");}
+        else if (sel_cut_case == 3) {ReadBackgroundFile.open("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/2026/mar_26/week_mar_23/background_int_dt_txt_files/Background_Int_dt_4216_600phe.txt");}
+        else if (sel_cut_case == 4) {ReadBackgroundFile.open("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/2026/mar_26/week_mar_23/background_int_dt_txt_files/Background_Int_dt_4216_mult12.txt");}
+        if (!ReadBackgroundFile.is_open()) {
+            cout << "Error: Could not open background file" << endl;
+            return;
+        }
 
         count = 0;
         // Use a while loop together with the getline() function to read the file line by line
@@ -426,20 +654,24 @@ void fit_mc_bg_to_data_loop() {
                 if (ch != '\t') {num_str.push_back(ch);}            
                 else if (ch == '\t') {num_vec.push_back(stod(num_str)); num_str.clear();}        
             }
-            if (num_vec[0] >= 0.0 && num_vec[0] <= 10000.0 && num_vec[1] > 50.0) {
+            if (num_vec[0] >= 0.0 && num_vec[0] <= 10000.0 && num_vec[1] > minEnergy && num_vec[1] <= maxEnergy) {
                 double rand_num = std::floor(rng.Uniform(1.00001, 100.99999));
                 if (rand_num == 50.0) {
+                    // if (count < SSBnum) {
                     g_target->Fill(num_vec[0], num_vec[1]);
+                    h_sg_energy->Fill(num_vec[1]);
                     count += 1;
                 }
                 g_hist_SSB->Fill(num_vec[0], num_vec[1]);
                 h_background_true->Fill(num_vec[0], num_vec[1]);
+                h_bg_energy->Fill(num_vec[1]);
                 bg_time.push_back(num_vec[0]);
                 bg_energy.push_back(num_vec[1]);
             }
         }
 
         h_bg_stats->Fill(count);
+        SSBnum = 0.01 * g_hist_SSB->Integral();
 
         // Close the file
         ReadBackgroundFile.close();
@@ -447,13 +679,24 @@ void fit_mc_bg_to_data_loop() {
         
         // cout << "  Loaded " << bg_time.size() << " events into h_SSB" << endl;
         // cout << "  Histogram integral: " << g_hist_SSB->Integral() << endl;
+        // cout << "  h_sg_energy integral: " << h_sg_energy->Integral() << endl;
 
         cout << "\nFilled histograms:" << endl;
         cout << "  Loaded " << g_target->Integral() << " events into h_target" << endl;
         cout << "  Loaded " << g_hist_vD->Integral() << " events into h_vD" << endl;
         cout << "  Loaded " << g_hist_vO->Integral() << " events into h_vO" << endl;
         cout << "  Loaded " << g_hist_BRN->Integral() << " events into h_BRN" << endl;
+        cout << "  Loaded " << g_hist_vFe->Integral() << " events into h_vFe" << endl;
+        cout << "  Loaded " << g_hist_vPb->Integral() << " events into h_vPb" << endl;
         cout << "  Loaded " << g_hist_SSB->Integral() << " events into h_SSB" << endl;
+
+        cout << "\nPredicted event rates:" << endl;
+        cout << "  vDnum = " << vDnum << endl;
+        cout << "  vOnum = " << vOnum << endl;
+        cout << "  BRNnum = " << BRNnum << endl;
+        cout << "  vFenum = " << vFenum << endl;
+        cout << "  vPbnum = " << vPbnum << endl;
+        cout << "  SSBnum = " << SSBnum << endl;
         
         // cout << "\n========================================" << endl;
         // cout << "Setting up Fitting Function" << endl;
@@ -464,15 +707,21 @@ void fit_mc_bg_to_data_loop() {
         double vD_total = g_hist_vD->Integral();
         double vO_total = g_hist_vO->Integral();
         double BRN_total = g_hist_BRN->Integral();
+        double vFe_total = g_hist_vFe->Integral();
+        double vPb_total = g_hist_vPb->Integral();
         double SSB_total = g_hist_SSB->Integral();
-        double scale_vD = ((627.0 + randVal1) / vD_total);
-        double scale_vO = ((114.0 + randVal2) / vO_total);
-        double scale_BRN = ((130.0 + randVal3) / BRN_total);
+        double scale_vD = ((vDnum + randVal1) / vD_total);
+        double scale_vO = ((vOnum + randVal2) / vO_total);
+        double scale_BRN = ((BRNnum + randVal3) / BRN_total);
+        double scale_vFe = ((vFenum + randVal4) / vFe_total);
+        double scale_vPb = ((vPbnum + randVal5) / vPb_total);
         double scale_SSB = (count / SSB_total);
 
         // g_hist_vD->Scale(scale_vD);
         // g_hist_vO->Scale(scale_vO);
         // g_hist_BRN->Scale(scale_BRN);
+        // g_hist_vFe->Scale(scale_vFe);
+        // g_hist_vPb->Scale(scale_vPb);
         // g_hist_SSB->Scale(scale_SSB);
 
         // Choose chi2 or NLL fitting method (1 = ChiSquaredFCN, 2 = NegLogLikelihoodFCN)
@@ -482,42 +731,52 @@ void fit_mc_bg_to_data_loop() {
         ROOT::Fit::Fitter fitter;
         
         // Set the function to minimize (our chi-squared or NLL function)
-        ROOT::Math::Functor fcn(NegLogLikelihoodFCN, 4);
+        ROOT::Math::Functor fcn(NegLogLikelihoodFCN, 6);
         fitter.SetFCN(fcn);
 
         // Set initial parameter values - start with random weights
         // TRandom3 rng(0);  // Use 0 for random seed based on system time, or use a fixed number for reproducibility
-        double initial_params[4];
+        double initial_params[6];
         // initial_params[0] = rng.Uniform(0.05, 10.5);  // Random weight for vD between 0.05 and 10.5
         // initial_params[1] = rng.Uniform(0.05, 10.5);  // Random weight for vO between 0.05 and 10.5
         // initial_params[2] = rng.Uniform(0.05, 10.5);  // Random weight for BRN between 0.05 and 10.5
-        // initial_params[3] = rng.Uniform(0.05, 10.5);  // Random weight for BRN between 0.05 and 10.5
+        // initial_params[3] = rng.Uniform(0.05, 10.5);  // Random weight for vFe between 0.05 and 10.5
+        // initial_params[4] = rng.Uniform(0.05, 10.5);  // Random weight for vPb between 0.05 and 10.5
+        // initial_params[5] = rng.Uniform(0.05, 10.5);  // Random weight for SSB between 0.05 and 10.5
 
         // Estimate initial weights from your target composition
         initial_params[0] = scale_vD;
         initial_params[1] = scale_vO;
         initial_params[2] = scale_BRN;
-        initial_params[3] = scale_SSB;
+        initial_params[3] = scale_vFe;
+        initial_params[4] = scale_vPb;
+        initial_params[5] = scale_SSB;
 
-        fitter.Config().SetParamsSettings(4, initial_params);
+        fitter.Config().SetParamsSettings(6, initial_params);
         
         // Set parameter names
         fitter.Config().ParSettings(0).SetName("weight_vD");
         fitter.Config().ParSettings(1).SetName("weight_vO");
         fitter.Config().ParSettings(2).SetName("weight_BRN");
-        fitter.Config().ParSettings(2).SetName("weight_SSB");
+        fitter.Config().ParSettings(3).SetName("weight_vFe");
+        fitter.Config().ParSettings(4).SetName("weight_vPb");
+        fitter.Config().ParSettings(5).SetName("weight_SSB");
         
         // Set parameter limits (weights should be non-negative)
         fitter.Config().ParSettings(0).SetLimits(-1e6, 1e6);
         fitter.Config().ParSettings(1).SetLimits(-1e6, 1e6);
         fitter.Config().ParSettings(2).SetLimits(-1e6, 1e6);
-        fitter.Config().ParSettings(3).SetLimits(-1e6, 1e6);
+        fitter.Config().ParSettings(3).SetLimits(scale_vFe * 0.7, scale_vFe * 1.3);
+        fitter.Config().ParSettings(4).SetLimits(-1e6, 1e6);
+        fitter.Config().ParSettings(5).SetLimits(-1e6, 1e6);
         
         cout << "\nInitial parameters:" << endl;
         cout << "  weight_vD  = " << initial_params[0] << endl;
         cout << "  weight_vO  = " << initial_params[1] << endl;
         cout << "  weight_BRN = " << initial_params[2] << endl;
-        cout << "  weight_SSB = " << initial_params[3] << endl;
+        cout << "  weight_vFe = " << initial_params[3] << endl;
+        cout << "  weight_vPb = " << initial_params[4] << endl;
+        cout << "  weight_SSB = " << initial_params[5] << endl;
 
         // fitter.SetFitType(1); // chi2
         // fitter.SetFitType(3); // NLL
@@ -538,19 +797,23 @@ void fit_mc_bg_to_data_loop() {
         cout << "  weight_vD  = " << result.Parameter(0) << " +/- " << result.ParError(0) << endl;
         cout << "  weight_vO  = " << result.Parameter(1) << " +/- " << result.ParError(1) << endl;
         cout << "  weight_BRN = " << result.Parameter(2) << " +/- " << result.ParError(2) << endl;
-        cout << "  weight_SSB = " << result.Parameter(3) << " +/- " << result.ParError(3) << endl;
+        cout << "  weight_vFe = " << result.Parameter(3) << " +/- " << result.ParError(3) << endl;
+        cout << "  weight_vPb = " << result.Parameter(4) << " +/- " << result.ParError(4) << endl;
+        cout << "  weight_SSB = " << result.Parameter(5) << " +/- " << result.ParError(5) << endl;
 
         h_vD_num->Fill(result.Parameter(0) * g_hist_vD->Integral());
         h_vO_num->Fill(result.Parameter(1) * g_hist_vO->Integral());
         h_BRN_num->Fill(result.Parameter(2) * g_hist_BRN->Integral());
-        h_SSB_num->Fill(result.Parameter(3) * g_hist_SSB->Integral());
+        h_vFe_num->Fill(result.Parameter(3) * g_hist_vFe->Integral());
+        h_vPb_num->Fill(result.Parameter(4) * g_hist_vPb->Integral());
+        h_SSB_num->Fill(result.Parameter(5) * g_hist_SSB->Integral());
 
         h_vD_vO->Fill(result.Parameter(0) * g_hist_vD->Integral(), result.Parameter(1) * g_hist_vO->Integral());
         h_vD_BRN->Fill(result.Parameter(0) * g_hist_vD->Integral(), result.Parameter(2) * g_hist_BRN->Integral());
-        h_vD_SSB->Fill(result.Parameter(0) * g_hist_vD->Integral(), result.Parameter(3) * g_hist_SSB->Integral());
+        h_vD_SSB->Fill(result.Parameter(0) * g_hist_vD->Integral(), result.Parameter(5) * g_hist_SSB->Integral());
         h_vO_BRN->Fill(result.Parameter(1) * g_hist_vO->Integral(), result.Parameter(2) * g_hist_BRN->Integral());
-        h_vO_SSB->Fill(result.Parameter(1) * g_hist_vO->Integral(), result.Parameter(3) * g_hist_SSB->Integral());
-        h_BRN_SSB->Fill(result.Parameter(2) * g_hist_BRN->Integral(), result.Parameter(3) * g_hist_SSB->Integral());
+        h_vO_SSB->Fill(result.Parameter(1) * g_hist_vO->Integral(), result.Parameter(5) * g_hist_SSB->Integral());
+        h_BRN_SSB->Fill(result.Parameter(2) * g_hist_BRN->Integral(), result.Parameter(5) * g_hist_SSB->Integral());
         
         h_bg_vO_trend->Fill(count, result.Parameter(1) * g_hist_vO->Integral());
 
@@ -558,7 +821,9 @@ void fit_mc_bg_to_data_loop() {
         cout << "  events_vD  = " << result.Parameter(0) * g_hist_vD->Integral() << " +/- " << result.ParError(0) * g_hist_vD->Integral() << endl;
         cout << "  events_vO  = " << result.Parameter(1) * g_hist_vO->Integral() << " +/- " << result.ParError(1) * g_hist_vO->Integral() << endl;
         cout << "  events_BRN = " << result.Parameter(2) * g_hist_BRN->Integral() << " +/- " << result.ParError(2) * g_hist_BRN->Integral() << endl;
-        cout << "  events_SSB = " << result.Parameter(3) * g_hist_SSB->Integral() << " +/- " << result.ParError(3) * g_hist_SSB->Integral() << endl;
+        cout << "  events_vFe = " << result.Parameter(3) * g_hist_vFe->Integral() << " +/- " << result.ParError(3) * g_hist_vFe->Integral() << endl;
+        cout << "  events_vPb = " << result.Parameter(4) * g_hist_vPb->Integral() << " +/- " << result.ParError(4) * g_hist_vPb->Integral() << endl;
+        cout << "  events_SSB = " << result.Parameter(5) * g_hist_SSB->Integral() << " +/- " << result.ParError(5) * g_hist_SSB->Integral() << endl;
         
         cout << "\n========================================" << endl;
         cout << "Fit Results" << endl;
@@ -575,7 +840,7 @@ void fit_mc_bg_to_data_loop() {
                     if (g_target->GetBinError(ix, iy) > 0) ndf++;
                 }
             }
-            ndf -= 3;  // Subtract number of fit parameters
+            ndf -= 6;  // Subtract number of fit parameters
             
             cout << "NDF: " << ndf << endl;
             cout << "Chi2/NDF: " << result.MinFcnValue() / ndf << endl;
@@ -592,8 +857,8 @@ void fit_mc_bg_to_data_loop() {
             }
             
             cout << "Number of bins with data: " << nbins_used << endl;
-            cout << "Number of parameters: 3" << endl;
-            cout << "Effective NDF: " << (nbins_used - 3) << endl;
+            cout << "Number of parameters: 6" << endl;
+            cout << "Effective NDF: " << (nbins_used - 6) << endl;
             cout << "NLL per bin: " << result.MinFcnValue() / nbins_used << endl;
 
             h_chi2_per_ndf->Fill(result.MinFcnValue() / nbins_used);
@@ -605,7 +870,9 @@ void fit_mc_bg_to_data_loop() {
                 double val = result.Parameter(0) * g_hist_vD->GetBinContent(ix, iy) +
                              result.Parameter(1) * g_hist_vO->GetBinContent(ix, iy) +
                              result.Parameter(2) * g_hist_BRN->GetBinContent(ix, iy) +
-                             result.Parameter(3) * g_hist_SSB->GetBinContent(ix, iy);
+                             result.Parameter(3) * g_hist_vFe->GetBinContent(ix, iy) +
+                             result.Parameter(4) * g_hist_vPb->GetBinContent(ix, iy) +
+                             result.Parameter(5) * g_hist_SSB->GetBinContent(ix, iy);
                 h_fitted_2D->SetBinContent(ix, iy, val);
             }
         }
@@ -618,8 +885,8 @@ void fit_mc_bg_to_data_loop() {
             cout << "Creating plots..." << endl;
             cout << "========================================" << endl;
 
-            TCanvas* c2 = new TCanvas("c2", "Interaction Event Rates", 1600, 1200);
-            c2->Divide(3, 2);
+            TCanvas* c2 = new TCanvas("c2", "2D Event Rates", 1600, 1200);
+            c2->Divide(4, 2);
 
             // ===================================================================
             // Plot 1: Target
@@ -662,14 +929,38 @@ void fit_mc_bg_to_data_loop() {
             h_BRN_copy->Draw("COLZ");
 
             // ===================================================================
-            // Plot 5: SSB
+            // Plot 5: vFe
             // ===================================================================
             c2->cd(5);
+            TH2D *h_vFe_copy = (TH2D*)g_hist_vFe->Clone("h_vFe_copy");
+            h_vFe_copy->SetTitle("vFe");
+            h_vFe_copy->GetXaxis()->SetTitle("Time");
+            h_vFe_copy->GetYaxis()->SetTitle("Energy");
+            h_vFe_copy->Draw("COLZ");
+
+            // ===================================================================
+            // Plot 6: vPb
+            // ===================================================================
+            c2->cd(6);
+            TH2D *h_vPb_copy = (TH2D*)g_hist_vPb->Clone("h_vPb_copy");
+            h_vPb_copy->SetTitle("vPb");
+            h_vPb_copy->GetXaxis()->SetTitle("Time");
+            h_vPb_copy->GetYaxis()->SetTitle("Energy");
+            h_vPb_copy->Draw("COLZ");
+
+            // ===================================================================
+            // Plot 7: SSB
+            // ===================================================================
+            c2->cd(7);
             TH2D *h_SSB_copy = (TH2D*)g_hist_SSB->Clone("h_SSB_copy");
             h_SSB_copy->SetTitle("SSB");
             h_SSB_copy->GetXaxis()->SetTitle("Time");
             h_SSB_copy->GetYaxis()->SetTitle("Energy");
             h_SSB_copy->Draw("COLZ");
+
+            c2->Update();
+
+            c2->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/2D_Event_Rates.png");
             
             TCanvas* c3 = new TCanvas("c3", "MC to Data Fit Results - 2D", 1600, 1200);
             c3->Divide(3, 2);
@@ -829,12 +1120,14 @@ void fit_mc_bg_to_data_loop() {
             latex2->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss->GetParameter(2)));
             
             c3->Update();
+
+            c3->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/MC_to_Data_Fit_Results-2D.png");
             
             // ===================================================================
             // Create a second canvas with MC components
             // ===================================================================
-            TCanvas* c4 = new TCanvas("c4", "MC Components", 1600, 800);
-            c4->Divide(5, 2);
+            TCanvas* c4 = new TCanvas("c4", "MC Components", 2400, 800);
+            c4->Divide(7, 2);
             
             // Plot weighted MC components - Energy projections
             c4->cd(1);
@@ -872,16 +1165,38 @@ void fit_mc_bg_to_data_loop() {
 
             c4->cd(4);
             gPad->SetLogy();
+            TH2D* h_vFe_scaled = (TH2D*)g_hist_vFe->Clone("h_vFe_scaled");
+            h_vFe_scaled->Scale(result.Parameter(3));
+            TH1D* h_vFe_energy = h_vFe_scaled->ProjectionY("h_vFe_energy");
+            h_vFe_energy->SetLineColor(kCyan+2);
+            h_vFe_energy->SetLineWidth(2);
+            h_vFe_energy->SetTitle(Form("vFe Energy (w=%.5f)", result.Parameter(3)));
+            h_vFe_energy->GetXaxis()->SetTitle("Energy");
+            h_vFe_energy->Draw("HIST");
+
+            c4->cd(5);
+            gPad->SetLogy();
+            TH2D* h_vPb_scaled = (TH2D*)g_hist_vPb->Clone("h_vPb_scaled");
+            h_vPb_scaled->Scale(result.Parameter(4));
+            TH1D* h_vPb_energy = h_vPb_scaled->ProjectionY("h_vPb_energy");
+            h_vPb_energy->SetLineColor(kYellow+3);
+            h_vPb_energy->SetLineWidth(2);
+            h_vPb_energy->SetTitle(Form("vPb Energy (w=%.5f)", result.Parameter(4)));
+            h_vPb_energy->GetXaxis()->SetTitle("Energy");
+            h_vPb_energy->Draw("HIST");
+
+            c4->cd(6);
+            gPad->SetLogy();
             TH2D* h_SSB_scaled = (TH2D*)g_hist_SSB->Clone("h_SSB_scaled");
-            h_SSB_scaled->Scale(result.Parameter(3));
+            h_SSB_scaled->Scale(result.Parameter(5));
             TH1D* h_SSB_energy = h_SSB_scaled->ProjectionY("h_SSB_energy");
             h_SSB_energy->SetLineColor(kOrange);
             h_SSB_energy->SetLineWidth(2);
-            h_SSB_energy->SetTitle(Form("SSB Energy (w=%.5f)", result.Parameter(3)));
+            h_SSB_energy->SetTitle(Form("SSB Energy (w=%.5f)", result.Parameter(5)));
             h_SSB_energy->GetXaxis()->SetTitle("Energy");
             h_SSB_energy->Draw("HIST");
 
-            c4->cd(5);
+            c4->cd(7);
             gPad->SetLogy();
             TH2D* h_Me_scaled = (TH2D*)g_target->Clone("h_Me_scaled");
             TH1D* h_Me_energy = h_Me_scaled->ProjectionY("h_Me_energy");
@@ -892,7 +1207,7 @@ void fit_mc_bg_to_data_loop() {
             h_Me_energy->Draw("HIST");
             
             // Plot weighted MC components - Time projections
-            c4->cd(6);
+            c4->cd(8);
             gPad->SetLogy();
             TH1D* h_vD_time = h_vD_scaled->ProjectionX("h_vD_time");
             h_vD_time->SetLineColor(kRed);
@@ -901,7 +1216,7 @@ void fit_mc_bg_to_data_loop() {
             h_vD_time->GetXaxis()->SetTitle("Time");
             h_vD_time->Draw("HIST");
             
-            c4->cd(7);
+            c4->cd(9);
             gPad->SetLogy();
             TH1D* h_vO_time = h_vO_scaled->ProjectionX("h_vO_time");
             h_vO_time->SetLineColor(kBlue);
@@ -910,7 +1225,7 @@ void fit_mc_bg_to_data_loop() {
             h_vO_time->GetXaxis()->SetTitle("Time");
             h_vO_time->Draw("HIST");
             
-            c4->cd(8);
+            c4->cd(10);
             gPad->SetLogy();
             TH1D* h_BRN_time = h_BRN_scaled->ProjectionX("h_BRN_time");
             h_BRN_time->SetLineColor(kGreen+2);
@@ -919,16 +1234,34 @@ void fit_mc_bg_to_data_loop() {
             h_BRN_time->GetXaxis()->SetTitle("Time");
             h_BRN_time->Draw("HIST");
 
-            c4->cd(9);
+            c4->cd(11);
+            gPad->SetLogy();
+            TH1D* h_vFe_time = h_vFe_scaled->ProjectionX("h_vFe_time");
+            h_vFe_time->SetLineColor(kCyan+2);
+            h_vFe_time->SetLineWidth(2);
+            h_vFe_time->SetTitle(Form("vFe Time (w=%.5f)", result.Parameter(3)));
+            h_vFe_time->GetXaxis()->SetTitle("Time");
+            h_vFe_time->Draw("HIST");
+
+            c4->cd(12);
+            gPad->SetLogy();
+            TH1D* h_vPb_time = h_vPb_scaled->ProjectionX("h_vPb_time");
+            h_vPb_time->SetLineColor(kYellow+3);
+            h_vPb_time->SetLineWidth(2);
+            h_vPb_time->SetTitle(Form("vPb Time (w=%.5f)", result.Parameter(4)));
+            h_vPb_time->GetXaxis()->SetTitle("Time");
+            h_vPb_time->Draw("HIST");
+
+            c4->cd(13);
             gPad->SetLogy();
             TH1D* h_SSB_time = h_SSB_scaled->ProjectionX("h_SSB_time");
             h_SSB_time->SetLineColor(kOrange);
             h_SSB_time->SetLineWidth(2);
-            h_SSB_time->SetTitle(Form("SSB Time (w=%.5f)", result.Parameter(3)));
+            h_SSB_time->SetTitle(Form("SSB Time (w=%.5f)", result.Parameter(5)));
             h_SSB_time->GetXaxis()->SetTitle("Time");
             h_SSB_time->Draw("HIST");
 
-            c4->cd(10);
+            c4->cd(14);
             gPad->SetLogy();
             TH1D* h_Me_time = h_Me_scaled->ProjectionX("h_Me_time");
             h_Me_time->SetLineColor(kMagenta+2);
@@ -938,6 +1271,8 @@ void fit_mc_bg_to_data_loop() {
             h_Me_time->Draw("HIST");
             
             c4->Update();
+
+            c4->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/MC_Components.png");
 
             // ===================================================================
             // Create a third canvas with original 2D histograms
@@ -1064,6 +1399,8 @@ void fit_mc_bg_to_data_loop() {
 
             c6->Update();
 
+            c6->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/1D_Plots.png");
+
             // ===================================================================
             // Create a canvas showing true and scaled background plots
             // ===================================================================
@@ -1097,6 +1434,45 @@ void fit_mc_bg_to_data_loop() {
             h_bg_vO_trend->Draw("COLZ");
 
             c7->Update();
+
+            c7->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/Steady_State_Background.png");
+
+            // ===================================================================
+            // Create a canvas showing true and scaled background plots
+            // ===================================================================
+            TCanvas* c9 = new TCanvas("c9", "Residual Errors", 2000, 1000);
+            c9->Divide(2, 1);
+
+            c9->cd(1);
+            h_sg_energy->GetXaxis()->SetTitle("Number of PEs");
+            h_sg_energy->GetYaxis()->SetTitle("Counts per 25 PEs");
+            h_sg_energy->SetMarkerStyle(20);
+            h_sg_energy->SetMarkerSize(1.0);
+            h_sg_energy->Draw("E1 X0 P");
+
+            c9->cd(2);
+            TH1D* h_res_energy = (TH1D*)h_sg_energy->Clone("h_res_energy");
+            h_bg_energy->Scale(0.01);
+            h_res_energy->Add(h_bg_energy, -1);
+            int numBins = h_sg_energy->GetNbinsX();
+            for (int i = 1; i <= numBins; i++) {
+                double res_counts = h_sg_energy->GetBinContent(i);
+                double res_error  = (res_counts > 0) ? std::sqrt(res_counts) : 0.0;
+                h_res_energy->SetBinError(i, res_error);
+                // std::cout << "h_sg_energy, Bin " << i << ": Counts = " << h_sg_energy->GetBinContent(i) << ", Error = " << h_sg_energy->GetBinError(i) << std::endl;
+                // std::cout << "h_res_energy, Bin " << i << ": Counts = " << h_res_energy->GetBinContent(i) << ", Error = " << h_res_energy->GetBinError(i) << std::endl;
+            }
+            h_res_energy->SetTitle("In-Beam Window Residual Energy");
+            h_res_energy->GetXaxis()->SetTitle("Number of PEs");
+            h_res_energy->GetYaxis()->SetTitle("Counts per 25 PEs");
+            h_res_energy->SetMarkerStyle(20);
+            h_res_energy->SetMarkerSize(1.0);
+            h_res_energy->Draw("E1 X0 P");
+
+            c9->Update();
+
+            c9->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/Residual_Errors.png");
+
         }
 
     }
@@ -1111,8 +1487,8 @@ void fit_mc_bg_to_data_loop() {
     // ===================================================================
     // Create a canvas showing fitting results over many loops
     // ===================================================================
-    TCanvas* c1 = new TCanvas("c1", "Interaction Event Rates", 1600, 1200);
-    c1->Divide(3, 2);
+    TCanvas* c1 = new TCanvas("c1", "Interaction Event Rates", 1800, 1200);
+    c1->Divide(4, 2);
     
     // ===================================================================
     // Plot 1: vD
@@ -1124,7 +1500,7 @@ void fit_mc_bg_to_data_loop() {
     h_vD_num->Draw();
 
     // Draw line at predicted event rate
-    TLine *line1 = new TLine(627, 0, 627, h_vD_num->GetMaximum());
+    TLine *line1 = new TLine(vDnum, 0, vDnum, h_vD_num->GetMaximum());
     line1->SetLineColor(kBlack);
     line1->SetLineWidth(3);
     line1->Draw("same");
@@ -1149,7 +1525,7 @@ void fit_mc_bg_to_data_loop() {
     h_vO_num->Draw();
 
     // Draw line at predicted event rate
-    TLine *line2 = new TLine(114, 0, 114, h_vO_num->GetMaximum());
+    TLine *line2 = new TLine(vOnum, 0, vOnum, h_vO_num->GetMaximum());
     line2->SetLineColor(kBlack);
     line2->SetLineWidth(3);
     line2->Draw("same");
@@ -1174,7 +1550,7 @@ void fit_mc_bg_to_data_loop() {
     h_BRN_num->Draw();
 
     // Draw line at predicted event rate
-    TLine *line3 = new TLine(130, 0, 130, h_BRN_num->GetMaximum());
+    TLine *line3 = new TLine(BRNnum, 0, BRNnum, h_BRN_num->GetMaximum());
     line3->SetLineColor(kBlack);
     line3->SetLineWidth(3);
     line3->Draw("same");
@@ -1190,23 +1566,23 @@ void fit_mc_bg_to_data_loop() {
     latex3->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss3->GetParameter(2)));
 
     // ===================================================================
-    // Plot 4: SSB
+    // Plot 4: vFe
     // ===================================================================
     c1->cd(4);
-    h_SSB_num->SetTitle("SSB");
-    h_SSB_num->GetXaxis()->SetTitle("Number of Events");
-    h_SSB_num->GetYaxis()->SetTitle("Number of Fit Attempts");
-    h_SSB_num->Draw();
+    h_vFe_num->SetTitle("vFe");
+    h_vFe_num->GetXaxis()->SetTitle("Number of Events");
+    h_vFe_num->GetYaxis()->SetTitle("Number of Fit Attempts");
+    h_vFe_num->Draw();
 
     // Draw line at predicted event rate
-    TLine *line4 = new TLine(1680, 0, 1680, h_SSB_num->GetMaximum());
+    TLine *line4 = new TLine(vFenum, 0, vFenum, h_vFe_num->GetMaximum());
     line4->SetLineColor(kBlack);
     line4->SetLineWidth(3);
     line4->Draw("same");
 
     // Fit distribution with Gaussian
     TF1* gauss4 = new TF1("gauss", "gaus", 110, 150);
-    h_SSB_num->Fit(gauss4, "Q");
+    h_vFe_num->Fit(gauss4, "Q");
     
     TLatex* latex4 = new TLatex();
     latex4->SetNDC();
@@ -1215,10 +1591,60 @@ void fit_mc_bg_to_data_loop() {
     latex4->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss4->GetParameter(2)));
 
     // ===================================================================
-    // Plot 5: Chi2/NDF
+    // Plot 5: vPb
+    // ===================================================================
+    c1->cd(5);
+    h_vPb_num->SetTitle("vPb");
+    h_vPb_num->GetXaxis()->SetTitle("Number of Events");
+    h_vPb_num->GetYaxis()->SetTitle("Number of Fit Attempts");
+    h_vPb_num->Draw();
+
+    // Draw line at predicted event rate
+    TLine *line5 = new TLine(vPbnum, 0, vPbnum, h_vPb_num->GetMaximum());
+    line5->SetLineColor(kBlack);
+    line5->SetLineWidth(3);
+    line5->Draw("same");
+
+    // Fit distribution with Gaussian
+    TF1* gauss5 = new TF1("gauss", "gaus", 110, 150);
+    h_vPb_num->Fit(gauss5, "Q");
+    
+    TLatex* latex5 = new TLatex();
+    latex5->SetNDC();
+    latex5->SetTextSize(0.04);
+    latex5->DrawLatex(0.15, 0.85, Form("Mean = %.2f", gauss5->GetParameter(1)));
+    latex5->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss5->GetParameter(2)));
+
+    // ===================================================================
+    // Plot 6: SSB
+    // ===================================================================
+    c1->cd(6);
+    h_SSB_num->SetTitle("SSB");
+    h_SSB_num->GetXaxis()->SetTitle("Number of Events");
+    h_SSB_num->GetYaxis()->SetTitle("Number of Fit Attempts");
+    h_SSB_num->Draw();
+
+    // Draw line at predicted event rate
+    TLine *line6 = new TLine(SSBnum, 0, SSBnum, h_SSB_num->GetMaximum());
+    line6->SetLineColor(kBlack);
+    line6->SetLineWidth(3);
+    line6->Draw("same");
+
+    // Fit distribution with Gaussian
+    TF1* gauss6 = new TF1("gauss", "gaus", 110, 150);
+    h_SSB_num->Fit(gauss6, "Q");
+    
+    TLatex* latex6 = new TLatex();
+    latex6->SetNDC();
+    latex6->SetTextSize(0.04);
+    latex6->DrawLatex(0.15, 0.85, Form("Mean = %.2f", gauss6->GetParameter(1)));
+    latex6->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss6->GetParameter(2)));
+
+    // ===================================================================
+    // Plot 7: Chi2/NDF
     // ===================================================================
 
-    c1->cd(5);
+    c1->cd(7);
     // h_chi2_per_ndf->SetTitle("NLL per Number of Bins Used");
     if (fit_method == 1) {h_chi2_per_ndf->GetXaxis()->SetTitle("Chi2/NDF");}
     if (fit_method == 2) {h_chi2_per_ndf->GetXaxis()->SetTitle("NLL/Bins");}
@@ -1226,14 +1652,18 @@ void fit_mc_bg_to_data_loop() {
     h_chi2_per_ndf->Draw();
 
     // Fit distribution with Gaussian
-    TF1* gauss5 = new TF1("gauss", "gaus", -29, -27);
-    h_chi2_per_ndf->Fit(gauss5, "Q");
+    TF1* gauss7 = new TF1("gauss", "gaus", -29, -27);
+    h_chi2_per_ndf->Fit(gauss7, "Q");
 
-    TLatex* latex5 = new TLatex();
-    latex5->SetNDC();
-    latex5->SetTextSize(0.04);
-    latex5->DrawLatex(0.15, 0.85, Form("Mean = %.2f", gauss5->GetParameter(1)));
-    latex5->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss5->GetParameter(2)));
+    TLatex* latex7 = new TLatex();
+    latex7->SetNDC();
+    latex7->SetTextSize(0.04);
+    latex7->DrawLatex(0.15, 0.85, Form("Mean = %.2f", gauss7->GetParameter(1)));
+    latex7->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss7->GetParameter(2)));
+
+    c1->Update();
+
+    c1->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/Interaction_Event_Rates.png");
 
     // ===================================================================
     // Create a canvas showing correlations between different weights
@@ -1300,6 +1730,10 @@ void fit_mc_bg_to_data_loop() {
     h_BRN_SSB->GetXaxis()->SetTitle("BRN Event Rate");
     h_BRN_SSB->GetYaxis()->SetTitle("SSB Event Rate");
     h_BRN_SSB->Draw("COLZ");
+
+    c8->Update();
+
+    c8->SaveAs("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/fitting_results/four_test_cases/plots/Recovered_Weight_Correlations.png");
 
     /*TCanvas* c2 = new TCanvas("c2", "Interaction Event Rates", 1600, 1200);
     c2->Divide(4, 1);
