@@ -48,20 +48,22 @@ TH2D* g_hist_SSB = nullptr;  // RD: Steady-State Background
 TH2D* g_hist_UB = nullptr;   // RD: Unblinded Beam Spill Data
 TH2D* g_target = nullptr;    // Pseudo-Real Data: MC & SSB Events
 
-//Added separate function for loading simulation files. Returns an efficiency of applying
+// Added separate function for loading simulation files. Returns an efficiency of applying
 // - nPMT cut
 // - Min/max energy cut
 // - Integration time
 // - Whether events show up in the veto panel
-double create2DHist(TH2D* hist,std::string simFilename, std::string timingFilename,
-                    double integration_time = 416,int minPMTs_req=10,int minHits_req=30,int maxHits_req=500) {
+double create2DHist(TH2D* hist,std::string simFilename,std::string timingFilename,
+                    double integration_time=416,int minPMTs_req=10,int minHits_req=30,int maxHits_req=500) {
     /////////////////////////////////
     //Get timing distribution first//
     /////////////////////////////////
     string line;
     Long64_t nTimingEvents = 0;
-    double maxTime_ns = hist->GetXaxis()->GetXmax(); 
-    TH1D timingHist("timingHist", "",static_cast<int>(maxTime_ns),0,maxTime_ns);
+    double minTime_ns = hist->GetXaxis()->GetXmin();                        // THIS LINE IS NEW
+    double maxTime_ns = hist->GetXaxis()->GetXmax();
+    double binTime_ns = static_cast<int>(maxTime_ns - minTime_ns);          // THIS LINE IS NEW
+    TH1D timingHist("timingHist", "",binTime_ns,minTime_ns,maxTime_ns);     // THIS LINE IS CHANGED
     ifstream txt_file(static_cast<TString>(timingFilename));
     std::vector<double> timing_events = {};
     while (getline(txt_file, line)) {
@@ -89,28 +91,28 @@ double create2DHist(TH2D* hist,std::string simFilename, std::string timingFilena
             std::cout<<"On event "<<(*eventNumber)<<" of "<<nEntries<<std::endl;
         }
 
-        int nHits=0; //Stores the number of PEs (total) for this event
-        vector<int> hit_pmts = {}; //Stores a unique list of the hit PMTs within this event
-        vector<double> hit_times = {}; //Stores the individual hit times of the event, only used for finding the first event time
+        int nHits=0; // Stores the number of PEs (total) for this event
+        vector<int> hit_pmts = {}; // Stores a unique list of the hit PMTs within this event
+        vector<double> hit_times = {}; // Stores the individual hit times of the event, only used for finding the first event time
 
         if (*veto_tag) continue;
 
-        //Step through hits
+        // Step through hits
         for (int ihit=0;ihit<eventTime.GetSize();ihit++) {
-            //Check the hit occurs within integration time of the simulation start
+            // Check the hit occurs within integration time of the simulation start
             if (eventTime[ihit]<integration_time) {
                 nHits++;
                 hit_times.push_back(eventTime[ihit]);
-                //Check if we have already registered this PMT in our hit_pmts vector
+                // Check if we have already registered this PMT in our hit_pmts vector
                 if (std::find(hit_pmts.begin(), hit_pmts.end(), pmtNum[ihit]) == hit_pmts.end()){
                     hit_pmts.push_back(pmtNum[ihit]);
                 }
             }
         }
         
-        //Apply our cuts
-        if ((hit_pmts.size() >= minPMTs_req) && (nHits >= minHits_req) && (nHits < maxHits_req)) {
-            //If this passes the cuts, get our first hit time to add to neutrino timing distribution
+        // Apply our cuts
+        if ((hit_pmts.size() >= minPMTs_req) && (nHits >= minHits_req) && (nHits <= maxHits_req)) {
+            // If this passes the cuts, get our first hit time to add to neutrino timing distribution
             sort(hit_times.begin(),hit_times.end());
             double startTime = hit_times.at(0);
 
@@ -137,7 +139,6 @@ double create2DHist(TH2D* hist,std::string simFilename, std::string timingFilena
     return efficiency;
 }
 
-//TODO THIS IGNORES 5/6 OF THE STEADY STATE DATA
 int fillSSBHist(TH2D* hist,std::string fname,int minHits_req=30,int maxHits_req=500) {
     double time;
     double energy;
@@ -146,8 +147,8 @@ int fillSSBHist(TH2D* hist,std::string fname,int minHits_req=30,int maxHits_req=
 
     int nEntries = 0;
     while (file >> time >> energy) {
-        if (time >= hist->GetXaxis()->GetXmin() && time < hist->GetXaxis()->GetXmax() && energy >= minHits_req && energy < maxHits_req) {
-            hist->Fill(time, energy);  // x = energy, y = time
+        if (time >= hist->GetXaxis()->GetXmin() && time <= hist->GetXaxis()->GetXmax() && energy >= minHits_req && energy <= maxHits_req) {
+            hist->Fill(time, energy);  // x = time, y = energy
             nEntries++;
         }
     }
@@ -156,7 +157,7 @@ int fillSSBHist(TH2D* hist,std::string fname,int minHits_req=30,int maxHits_req=
 
 void main_fitting_fine() {
 
-    bool regenerate_pdfs = false; //Set to true to generate PDFs. Set to false to load from file
+    bool regenerate_pdfs = true;    // Set to true to generate PDFs. Set to false to load from file
 
     // Define dimensions of all 2D histograms
     int tbins = 40;
@@ -192,16 +193,19 @@ void main_fitting_fine() {
     int NLLmin = -20;
     int NLLmax = -10;
 
-    // Define number of events in target, without efficiencies. From Yuri's calculations
-    double vDnum = 581.4; 
+    double numscale_F24 = 0.47403734;       // Multiply the expected number of events in target with these scaling factors if considering only Fall or only Spring data
+    double numscale_S25 = 0.52596266;       // F24: 3250 MWhrs of “golden” SNS beam time; S25: 3606 MWhrs of “golden” SNS beam time
+
+    // The expected number of events in target, without efficiencies. From Yuri's calculations
+    double vDnum = 581.4;
     double vOnum = 94.6;
-    double BRNnum = 654; //This is an estimate, scaled to match the number reported in the original code with similar effs applied.
+    double BRNnum = 654;                    // This is an estimate, scaled to match the number reported in the original code with similar effs applied.
     double vFenum = 501;
     double vPbnum = 17244.5;
 
-    double peak_spread_rms_eff = 0.99;  //Afterglow cut, so equivalent to a dead time i.e. uniform efficiency
-    double time_integration_eff = 0.987; //Only impacts neutrino PDFs
-    double dead_time_eff = 0.996; //Uniform
+    double peak_spread_rms_eff = 0.99;      // Afterglow cut, so equivalent to a dead time i.e. uniform efficiency
+    double time_integration_eff = 0.987;    // Only impacts neutrino PDFs, is 0.787 if looking at the 1,000 ns - 10,000 ns range
+    double dead_time_eff = 0.996;           // Uniform
 
     double vD_sim_eff;
     double vO_sim_eff;
@@ -209,6 +213,8 @@ void main_fitting_fine() {
     double vPb_sim_eff;
     double brn_sim_eff;
     int nSSB_x100;
+    int nUB;
+
     if (regenerate_pdfs) {
         g_hist_vD = new TH2D("h_vD", "Neutrino-Deuterium Time vs Energy Distribution", tbins, tmin, tmax, ebins, emin, emax);
         g_hist_vO = new TH2D("h_vO", "Neutrino-Oxygen Time vs Energy Distribution", tbins, tmin, tmax, ebins, emin, emax);
@@ -218,16 +224,16 @@ void main_fitting_fine() {
         g_hist_SSB = new TH2D("h_SSB", "Out-of-Beam-Window Steady State Background Time vs Energy Distribution", tbins, tmin, tmax, ebins, emin, emax);
         g_hist_UB = new TH2D("h_UB", "Unblinded Beam Spill Data Time vs Energy Distribution", tbins, tmin, tmax, ebins, emin, emax);
         
-        vD_sim_eff = create2DHist(g_hist_vD,"sims/vD_Energy.root","sims/neutrino_timing.txt",integration_time_ns,minPMTs_req,emin,emax);
-        vO_sim_eff = create2DHist(g_hist_vO,"sims/vO_Energy.root","sims/neutrino_timing.txt",integration_time_ns,minPMTs_req,emin,emax);
-        vFe_sim_eff = create2DHist(g_hist_vFe,"sims/vFe_Energy.root","sims/neutrino_timing.txt",integration_time_ns,minPMTs_req,emin,emax);
-        vPb_sim_eff = create2DHist(g_hist_vPb,"sims/vPb_Energy.root","sims/neutrino_timing.txt",integration_time_ns,minPMTs_req,emin,emax);
-        brn_sim_eff = create2DHist(g_hist_BRN,"sims/BRN_Energy.root","sims/BRN_timing.txt",integration_time_ns,minPMTs_req,emin,emax);
-        nSSB_x100 = fillSSBHist(g_hist_SSB,"sims/SSB_Time_And_Energy.txt",emin,emax);
-        nUB = fillSSBHist(g_hist_UB,"data/UB_Time_And_Energy.txt",emin,emax);
+        vD_sim_eff = create2DHist(g_hist_vD,"sims/vD_Energy.root","sims/vD_Time.txt",integration_time_ns,minPMTs_req,emin,emax);
+        vO_sim_eff = create2DHist(g_hist_vO,"sims/vO_Energy.root","sims/vO_Time.txt",integration_time_ns,minPMTs_req,emin,emax);
+        vFe_sim_eff = create2DHist(g_hist_vFe,"sims/vFe_Energy.root","sims/vFe_Time.txt",integration_time_ns,minPMTs_req,emin,emax);
+        vPb_sim_eff = create2DHist(g_hist_vPb,"sims/vPb_Energy.root","sims/vPb_Time.txt",integration_time_ns,minPMTs_req,emin,emax);
+        brn_sim_eff = create2DHist(g_hist_BRN,"sims/BRN_Energy.root","sims/BRN_Time.txt",integration_time_ns,minPMTs_req,emin,emax);
+        nSSB_x100 = fillSSBHist(g_hist_SSB,"data/SSB_Time_And_Energy.txt",emin,emax);
+        nUB = fillSSBHist(g_hist_UB,"data/Unblinded_BeamSpill_Time_And_Energy.txt",emin,emax);
 
         TFile* outFile = new TFile("pdfs.root","RECREATE");
-        //We are storing the simulation efficiency as the integral to preserve this number in the outout
+        // We are storing the simulation efficiency as the integral to preserve this number in the outout
         g_hist_vD->Scale(vD_sim_eff/g_hist_vD->Integral());
         g_hist_vO->Scale(vO_sim_eff/g_hist_vO->Integral());
         g_hist_vFe->Scale(vFe_sim_eff/g_hist_vFe->Integral());
@@ -284,6 +290,7 @@ void main_fitting_fine() {
     std::cout<<"Nominal number of vPb events is "<<vPbnum<<std::endl;
     std::cout<<"Nominal number of BRN events is "<<BRNnum<<std::endl;
     std::cout<<"Nominal number of SSB events is "<<SSBnum<<std::endl;
+    std::cout<<"Nominal number of UB events is "<<nUB<<std::endl;
 
     ///////////////////////////////////
     //For plotting output of toy fits//
@@ -323,16 +330,18 @@ void main_fitting_fine() {
     //RooRealVars defined outside the loop
     RooRealVar roo_time("roo_time", "Time", tmin, tmax);
     RooRealVar roo_energy("roo_energy", "Energy", emin, emax);
+    roo_time.setBins(tbins); 
+    roo_energy.setBins(ebins);
     RooArgSet obs_set(roo_time, roo_energy);
 
     // Create RooDataHist for each MC template from TH2D
-    RooDataHist rdh_vD ("rdh_vD",  "vD template",  RooArgList(roo_time, roo_energy), g_hist_vD);
-    RooDataHist rdh_vO ("rdh_vO",  "vO template",  RooArgList(roo_time, roo_energy), g_hist_vO);
-    RooDataHist rdh_BRN("rdh_BRN", "BRN template", RooArgList(roo_time, roo_energy), g_hist_BRN);
-    RooDataHist rdh_vFe("rdh_vFe", "vFe template", RooArgList(roo_time, roo_energy), g_hist_vFe);
-    RooDataHist rdh_vPb("rdh_vPb", "vPb template", RooArgList(roo_time, roo_energy), g_hist_vPb);
-    RooDataHist rdh_SSB("rdh_SSB", "SSB template", RooArgList(roo_time, roo_energy), g_hist_SSB);
-    RooDataHist rdh_UB ("rdh_UB",  "Unblinded Data",  RooArgList(roo_time, roo_energy), g_hist_UB);
+    RooDataHist rdh_vD ("rdh_vD",  "vD template",   RooArgList(roo_time, roo_energy), g_hist_vD);
+    RooDataHist rdh_vO ("rdh_vO",  "vO template",   RooArgList(roo_time, roo_energy), g_hist_vO);
+    RooDataHist rdh_BRN("rdh_BRN", "BRN template",  RooArgList(roo_time, roo_energy), g_hist_BRN);
+    RooDataHist rdh_vFe("rdh_vFe", "vFe template",  RooArgList(roo_time, roo_energy), g_hist_vFe);
+    RooDataHist rdh_vPb("rdh_vPb", "vPb template",  RooArgList(roo_time, roo_energy), g_hist_vPb);
+    RooDataHist rdh_SSB("rdh_SSB", "SSB template",  RooArgList(roo_time, roo_energy), g_hist_SSB);
+    RooDataHist rdh_UB ("rdh_UB", "Unblinded Data", RooArgList(roo_time, roo_energy), g_hist_UB);
 
     // Create a shape PDF for each template (normalized to unit area internally)
     RooHistPdf pdf_vD ("pdf_vD",  "vD PDF",  obs_set, rdh_vD,0);
@@ -384,11 +393,11 @@ void main_fitting_fine() {
     int nFailed=0;
     for (int iLoop = min_loop; iLoop < max_loop; iLoop++) {
 
-        //cout << "\n========================================" << endl;
-        //cout << "================ " << "LOOP " << iLoop + 1 << " ================" << endl;
-        //cout << "========================================" << endl;
+        // cout << "\n========================================" << endl;
+        // cout << "================ " << "LOOP " << iLoop + 1 << " ================" << endl;
+        // cout << "========================================" << endl;
 
-        //Reset amplitudes to initial guesses each time
+        // Reset amplitudes to initial guesses each time
         N_vD.setVal(vDnum);
         N_vO.setVal(vOnum);
         N_vFe.setVal(vFenum);
@@ -396,13 +405,14 @@ void main_fitting_fine() {
         N_BRN.setVal(BRNnum);
         N_SSB.setVal(SSBnum);
             
-        auto* data = model.generateBinned(obs_set,
+        // When unblinding, can comment out lines 409-448, this part is just doing the toy fits
+        /*auto* data = model.generateBinned(obs_set,
                                           RooFit::NumEvents(static_cast<int>(std::round(total_num))),
-                                          RooFit::Extended(true),
+                                          // RooFit::Extended(true),
                                           RooFit::ExpectedData(true));
 
         RooFitResult* fitResult = model_c->fitTo(
-            *rdh_UB,            // *data,
+            *data,
             RooFit::Extended(kTRUE),
             RooFit::Save(kTRUE),
             RooFit::PrintLevel(-1),
@@ -429,6 +439,14 @@ void main_fitting_fine() {
         else {
         }
 
+        // Reset amplitudes to initial guesses each time
+        N_vD.setVal(vDnum);
+        N_vO.setVal(vOnum);
+        N_vFe.setVal(vFenum);
+        N_vPb.setVal(vPbnum);
+        N_BRN.setVal(BRNnum);
+        N_SSB.setVal(SSBnum);*/
+
         // ============================================================
         // This is a code block to do 1D and 2D profiles for every pair of variables.
         // Plotting in ROOT is (in my opinion) fugly, so the philosophy is just to dump text files and plot them in Python.
@@ -442,38 +460,113 @@ void main_fitting_fine() {
         std::vector<RooRealVar*> params = { &N_vD, &N_vO, &N_vFe, &N_vPb, &N_BRN, &N_SSB };
         std::vector<std::string> pnames = { "vD",  "vO",  "vFe",  "vPb",  "BRN",  "SSB"  };
 
-        /*// Scan range: ±50% (vD, vPb) or ±200 events (vO) around the best-fit value
-        double vD_val  = vDnum;            // N_vD.getVal();
-        double vO_val  = vOnum;            // N_vO.getVal();
-        double vFe_val = vFenum;           // N_vFe.getVal();
-        double vPb_val = vPbnum;           // N_vPb.getVal();
-        double BRN_val = BRNnum;           // N_BRN.getVal();
-        double SSB_val = SSBnum;           // N_SSB.getVal();
-
-        // TODO: if you need to change the ranges in the text/plots you can do it here.
-        std::vector<std::pair<double,double>> pranges = {
-            { vD_val * 0.5, vD_val * 1.5 },     // vD
-            { 0, vO_val + 200 },                // vO       // vO_val - 200
-            { vFe_val * 0.5, vFe_val * 1.5 },   // vFe
-            { vPb_val * 0.5, vPb_val * 1.5 },   // vPb
-            { BRN_val * 0.5, BRN_val * 1.5 },   // BRN
-            { SSB_val * 0.5, SSB_val * 1.5 }    // SSB
-        };*/
-
         const size_t nPar = params.size();
 
         // Do initial fit, ensure all are floating
         for (auto* p : params) { p->setConstant(false); }
-        std::unique_ptr<RooAbsReal> nll{model_c->createNLL(*rdh_UB, NumCPU(2))};      // Can just delete ", NumCPU(2)"            // *data,
-        for (auto* p : params) { p->setConstant(false); }
+
+        // Alternative to fitTo, creates NLL object, makes a function that you pass in parameters/model and it calculates NLL of dataset
+        std::unique_ptr<RooAbsReal> nll{model_c->createNLL(rdh_UB, RooFit::Constrain(RooArgSet(N_SSB, N_vFe)), NumCPU(2))};      // Can just delete ", NumCPU(2)"
             
+        // Minimizer sets up how it does minimization, uses default settings, migrad() does actual minimization
         RooMinimizer m(*nll);
-        m.setPrintLevel(-1);
         m.migrad();
+        m.setPrintLevel(-1);
+
+        //////////////////////////////////////
+        // Plot fitted Asimov data and model//
+        //////////////////////////////////////
+        gStyle->SetOptStat(0); // No status box
+
+        // Set line colors
+        const int color_vD  = kRed + 1;
+        const int color_vO  = kOrange + 7;
+        const int color_vFe = kGreen + 2;
+        const int color_vPb = kAzure + 2;
+        const int color_BRN = kMagenta + 1;
+        const int color_SSB = kGray + 2;
+
+        // Helper fn to plot projection over one of the axes
+        auto makeProjection = [&](RooRealVar& plotVar,const char* canvasName,const char* outputName,const char* xTitle,bool logy=false) {
+            
+            RooPlot* frame = plotVar.frame();
+
+            // Plot unblinded data
+            rdh_UB.plotOn(frame,RooFit::Name("Data"),RooFit::MarkerStyle(20),RooFit::MarkerSize(0.8),RooFit::LineColor(kBlack),RooFit::DataError(RooAbsData::Poisson));
+
+            // Individual fitted components
+            model.plotOn(frame,RooFit::Components("pdf_vD"),RooFit::Name("curve_vD"),RooFit::LineColor(color_vD),RooFit::LineStyle(kSolid),RooFit::LineWidth(2));
+            model.plotOn(frame,RooFit::Components("pdf_vO"),RooFit::Name("curve_vO"),RooFit::LineColor(color_vO),RooFit::LineStyle(kSolid),RooFit::LineWidth(2));
+            model.plotOn(frame,RooFit::Components("pdf_vFe"),RooFit::Name("curve_vFe"),RooFit::LineColor(color_vFe),RooFit::LineStyle(kSolid),RooFit::LineWidth(2));
+            model.plotOn(frame,RooFit::Components("pdf_vPb"),RooFit::Name("curve_vPb"),RooFit::LineColor(color_vPb),RooFit::LineStyle(kSolid),RooFit::LineWidth(2));
+            model.plotOn(frame,RooFit::Components("pdf_BRN"),RooFit::Name("curve_BRN"),RooFit::LineColor(color_BRN),RooFit::LineStyle(kSolid),RooFit::LineWidth(2));
+            model.plotOn(frame,RooFit::Components("pdf_SSB"),RooFit::Name("curve_SSB"),RooFit::LineColor(color_SSB),RooFit::LineStyle(kSolid),RooFit::LineWidth(2));
+
+            // Total fitted model last so it is clearly visible
+            model.plotOn(frame,RooFit::Name("curve_total"),RooFit::LineColor(kBlue + 2),RooFit::LineWidth(3));
+
+            // Replot data so the markers sit on top of all curves
+            rdh_UB.plotOn(frame,RooFit::Name("data_top"),RooFit::MarkerStyle(20),RooFit::MarkerSize(0.8),RooFit::LineColor(kBlack),RooFit::DataError(RooAbsData::Poisson));
+
+            // Make TCanvas, set up axes
+            TCanvas* canvas = new TCanvas(canvasName, canvasName, 900, 700);
+            canvas->SetLeftMargin(0.13);
+            canvas->SetRightMargin(0.05);
+            canvas->SetBottomMargin(0.12);
+            canvas->SetTopMargin(0.07);
+            canvas->SetTicks(1, 1);
+
+            frame->SetTitle("");
+            frame->GetXaxis()->SetTitle(xTitle);
+            frame->GetYaxis()->SetTitle("Events / Bin");
+
+            frame->GetXaxis()->SetTitleSize(0.045);
+            frame->GetYaxis()->SetTitleSize(0.045);
+            frame->GetXaxis()->SetLabelSize(0.040);
+            frame->GetYaxis()->SetLabelSize(0.040);
+            frame->GetYaxis()->SetTitleOffset(1.35);
+            frame->GetXaxis()->CenterTitle();
+            frame->GetYaxis()->CenterTitle();
+
+            // Set axes ranges and draw
+            if (logy) {
+                frame->SetMinimum(0.5);
+                frame->SetMaximum(15 * frame->GetMaximum());
+            }
+            else {
+                frame->SetMinimum(0.0);
+                frame->SetMaximum(1.25 * frame->GetMaximum());
+            }
+            frame->Draw();
+
+            // Make legend
+            TLegend* legend = new TLegend(0.64, 0.49, 0.93, 0.91);
+            legend->SetBorderSize(0);
+            legend->SetFillStyle(0);
+            legend->SetTextSize(0.033);
+            legend->AddEntry(frame->findObject("data_top"),"Unblinded data", "lep");
+            legend->AddEntry(frame->findObject("curve_total"),"Model", "l");
+            legend->AddEntry(frame->findObject("curve_vD"),"#nu_{e}D", "l");
+            legend->AddEntry(frame->findObject("curve_vO"),"#nu_{e}O", "l");
+            legend->AddEntry(frame->findObject("curve_vFe"),"#nu_{e}Fe", "l");
+            legend->AddEntry(frame->findObject("curve_vPb"),"#nu_{e}Pb", "l");
+            legend->AddEntry(frame->findObject("curve_BRN"),"BRN", "l");
+            legend->AddEntry(frame->findObject("curve_SSB"),"SSB", "l");
+            legend->Draw();
+
+            if (logy) {canvas->SetLogy();}
+            canvas->SaveAs(outputName);
+            delete canvas;
+
+        };
+
+        // Each RooPlot automatically projects over the other observable
+        makeProjection(roo_time,"c_time_projection","fit_time.pdf","Time [ns]",true);
+        makeProjection(roo_energy,"c_energy_projection","fit_energy.pdf","Number of photoelectrons",true);
 
         const double nll_min = nll->getVal();
 
-        //Set profile ranges to +-3 sigma (hesse errors), restricting to positive values
+        // Set profile ranges to +-3 sigma (hesse errors), restricting to positive values
         std::vector<std::pair<double,double>> pranges;
         for (auto* p : params) {
             double lower = p->getVal() - 3.0*p->getError();
@@ -481,9 +574,9 @@ void main_fitting_fine() {
             if (lower < 0) lower = 0;
             pranges.push_back({lower, upper});
         }
-
+        
         // 1D
-        const int n1d = 20;
+        const int n1d = 100;
         for (size_t i = 0; i < nPar; ++i) {
             RooRealVar* par = params[i];
             const double lo = pranges[i].first, hi = pranges[i].second;
@@ -494,7 +587,7 @@ void main_fitting_fine() {
             for (int ix = 0; ix < n1d; ++ix) {
                 double val = lo + (hi - lo) * (ix + 0.5) / n1d;
 
-                //Set all to initial values
+                // Set all to initial values
                 N_vD.setVal(vDnum);
                 N_vO.setVal(vOnum);
                 N_vFe.setVal(vFenum);
@@ -520,7 +613,7 @@ void main_fitting_fine() {
         }
 
         // 2D
-        const int n2d = 20;
+        const int n2d = 100;
         for (size_t i = 0; i < nPar; ++i) {
             for (size_t j = i + 1; j < nPar; ++j) {
                 RooRealVar* pX = params[i];
@@ -536,7 +629,7 @@ void main_fitting_fine() {
                     for (int iy = 0; iy < n2d; ++iy) {
                         double yVal = ylo + (yhi - ylo) * (iy + 0.5) / n2d;
 
-                        //Set all to initial values
+                        // Set all to initial values
                         N_vD.setVal(vDnum);
                         N_vO.setVal(vOnum);
                         N_vFe.setVal(vFenum);
@@ -563,7 +656,7 @@ void main_fitting_fine() {
                           << "_" << pnames[j] << ".txt" << std::endl;
             }
         }
-
+        
     }
     std::cout<<nFailed<<" fits failed"<<std::endl;
 }
