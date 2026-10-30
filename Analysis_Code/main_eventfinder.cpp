@@ -119,11 +119,17 @@ std::vector<double> MichelSiPMNoiseAvg5{ 214.9131176,219.8434706,227.0522353,211
 
 std::vector<double> MichelSiPMNoiseAvg6{ 202.2175,214.0718,190.558875,202.427125,209.80825,212.1195,195.1185,225.44875,227.461 };                               // May 24, 2025 - Aug 23, 2025
 
+std::vector<double> MichelSiPMNoiseAvg7{ 201.0280968,219.3897823,216.1231694,207.7725242,209.4667177,215.816371,227.0340161,231.9643629,268.8965081 };          // Aug 11, 2025 - Jun 24, 2026
+
 std::vector<double> MinMuonSiPMCut1{ 400,500,800,1000,300,400,350,250,400 };            // Jul 17, 2023 - Jan 30, 2024
 
 std::vector<double> MinMuonSiPMCut2{ 600,700,900,1100,400,500,450,350,500 };            // Feb 9, 2024 - Dec 15, 2024
 
 std::vector<double> MinMuonSiPMCut3{ 500,600,900,1100,400,400,350,300,500 };            // Jan 12, 2025 - Aug 24, 2025
+
+std::vector<double> MinMuonSiPMCut4{ 500,600,800,900,400,500,400,400,500 };             // Aug 11, 2025 - Jun 24, 2026
+
+std::vector<double> integralToPEF25S26{ 104.1735026,102.1484265,105.5107949,100.8622726,107.9768889,108.4633248,107.4503248,106.1125983,104.1273932,112.0,105.3396068,104.9230085 };            // Aug 11, 2025 - Jun 24, 2026
 
 template<typename T>
 double getAverage(std::vector<T> const& v) {
@@ -304,8 +310,13 @@ int main(int argc, char *argv[])
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/allweeklyruns/allweeklyruns_%i.txt", run));
     // 16151-16174 = 1721442002-1721524801 = 7/19/24-7/20/24 = file ~48 // 16351-16374 = 1722090001-1722172801 = 7/27/24-7/28/24 = file ~49
     // 16647-16671 = 1723155601-1723242001 = 8/08/24-8/09/24 = file 50  // 16855-16878 = 1723870861-1723953661 = 8/17/24-8/18/24 = file 51
-    ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F24-S25_GR_Runs/F24-S25_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F24-S25_GR_Runs/F24-S25_GR_%i.txt", run));
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F24-S25_BO_Runs/F24-S25_BO_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Runs_4084GR/F25-S26_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Weekly_4084GR/F25-S26_GR_Weekly_%i.txt", run));
+    ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Runs_6235GR/S25-S26_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Weekly_6149GR/S25-S26_GR_Weekly_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25F25S26_GR_3_rand_days_%i.txt", run));
 
     // Use a while loop together with the getline() function to read the file line by line
 
@@ -319,7 +330,7 @@ int main(int argc, char *argv[])
 
         iLine += 1;
 
-        if (iLine == 24) {break;}
+        // if (iLine == 24) {break;}
         
     }
     
@@ -339,7 +350,10 @@ int main(int argc, char *argv[])
 
     // Read from the text file
 
-    ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Vals.txt");           // hl_mean_val_all_1.txt          // Vertical_Muon_Peak_Center_1-124_Val_Only.txt
+    // To use F24-S25 data, delete "_F25-S26_GR"
+    // To use F25-S26 data, add "_F25-S26_GR" before "_1-124"
+    // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Vals.txt");          // Vertical_Muon_Peak_Center_1-124_Val_Only.txt         // hl_mean_val_all_1.txt          // hl_mean_val_all_temp.txt
+    ifstream ReadHLMFile("Vertical_Muon_Peak_Center_F25-S26_GR_1-124_Run_Vals.txt");
 
     // Use a while loop together with the getline() function to read the file line by line
 
@@ -355,7 +369,7 @@ int main(int argc, char *argv[])
         
     }
 
-    double defaultHLmean = 1813.94;         // sumHLmean / HLmeancounter;
+    double defaultHLmean = 1813.94;         // = 1613.271109; (F25-S26 Vert Muon Mean Value)           // = 1813.94; (12/1/24 Vert Muon Mean Value)         // = 34.5323; (11/26/24 HL Mean Value)         // sumHLmean / HLmeancounter;           // sumHLmean / HLmeancounter = 1783.874 (Averaged value)
 
     double currentHLmean = defaultHLmean;
 
@@ -481,6 +495,12 @@ int main(int argc, char *argv[])
 
         else if (run_iterable >= 16431) {vp18intcut = 150;}
 
+        int ev61_min = 1200; int ev61_max = 2000;
+
+        if (run_iterable < 24813) {ev61_min = 1200; ev61_max = 2000;}
+
+        else if (run_iterable >= 24813) {ev61_min = 700; ev61_max = 1000;}
+
         bool old_channel_map = false; int Event61Chan = 15; int SiPM1Chan = 16; int SiPM2Chan = 17; int SiPM3Chan = 18; int SiPM4Chan = 19; int SiPM5Chan = 20; int SiPM6Chan = 21; int SiPM7Chan = 22; int SiPM8Chan = 23; int SiPM9Chan = 24; int SiPM10Chan = 25;
 
         if (vers_num < 5) {old_channel_map = true; Event61Chan = 15; SiPM1Chan = 16; SiPM2Chan = 17; SiPM3Chan = 18; SiPM4Chan = 19; SiPM5Chan = 20; SiPM6Chan = 21; SiPM7Chan = 22; SiPM8Chan = 23; SiPM9Chan = 24; SiPM10Chan = 25;}
@@ -520,25 +540,32 @@ int main(int argc, char *argv[])
 
         // Read from the text file
 
-        ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Nums.txt");           // hl_mean_val_look_up_1.txt          // Vertical_Muon_Peak_Center_1-124_No_HL_Mean_Correction.txt
+        // To use F24-S25 data, delete "_F25-S26_GR"
+        // To use F25-S26 data, add "_F25-S26_GR" before "_1-124"
+        // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Nums.txt");          // Vertical_Muon_Peak_Center_1-124_No_HL_Mean_Correction.txt          // hl_mean_val_look_up_1.txt          // hl_mean_val_look_up_temp.txt
+        // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_F25-S26_GR_1-124_Run_Nums.txt");
+        // Runs 16830 - 32398 (F24-S26)
+        ifstream ReadHLMFile("Vertical_Muon_Peak_Center_All_F24-S26_GR_Run_Nums.txt");
 
         // Use a while loop together with the getline() function to read the file line by line
 
-        while (getline(ReadHLMFile, int_val_1)) {
+        while (getline(ReadHLMFile, intval2)) {
 
             num_vec.clear();
 
             num_str.clear();
 
-            int_val_1.push_back('\t');
+            intval2.push_back('\t');
 
-            for (char ch : int_val_1) {
+            for (char ch : intval2) {
                 
                 if (ch != '\t') {num_str.push_back(ch);}
                 
                 else if (ch == '\t') {num_vec.push_back(stod(num_str)); num_str.clear();}
             
             }
+
+            // cout << "\n" << "num_vec[0] = " << num_vec[0] << " num_vec[1] =  " << num_vec[1] << " num_vec.size() =  " << num_vec.size() << endl;
 
             if (num_vec[0] == run_iterable && num_vec[1] > 0.0) {
 
@@ -550,11 +577,21 @@ int main(int argc, char *argv[])
             
         }
 
+        // if (run_iterable < 24813) {defaultHLmean = 1813.94;}           // = 1813.94; (12/1/24 Vert Muon Mean Value)
+
+        // else if (run_iterable >= 24813) {defaultHLmean = 1613.271109;}         // = 1613.271109; (F25-S26 Vert Muon Mean Value)
+
         // Close the file
 
         ReadHLMFile.close();
 
         ReadHLMFile.clear();
+
+        // Experimental rotational correction, to correct for Michel integral change over time leftover/created by vertical muon correction
+
+        double rot_up_corr = run_starttime * 0.00000000042694381419 + 0.2600815812;
+
+        double rot_down_corr = run_starttime * -0.00000000060991973456 + 2.0570263125;
         
         // Create a text string, which is used to output the text file
 
@@ -642,7 +679,9 @@ int main(int argc, char *argv[])
 
         else if (run_starttime > 1734260462 && run_starttime <= 1748775661) {vp_cut_vals = MichelSiPMNoiseAvg5;}
 
-        else if (run_starttime > 1748775661) {vp_cut_vals = MichelSiPMNoiseAvg6;}
+        else if (run_starttime > 1748775661 && run_starttime < 1754892061) {vp_cut_vals = MichelSiPMNoiseAvg6;}
+
+        else if (run_starttime >= 1754892061) {vp_cut_vals = MichelSiPMNoiseAvg7;}
 
         // Select appropriate Minimum Muon values
 
@@ -652,7 +691,9 @@ int main(int argc, char *argv[])
 
         else if (run_starttime > 1706628002 && run_starttime <= 1734260462) {min_muon_vals = MinMuonSiPMCut2;}
 
-        else if (run_starttime > 1734260462) {min_muon_vals = MinMuonSiPMCut3;}
+        else if (run_starttime > 1734260462 && run_starttime < 1754892061) {min_muon_vals = MinMuonSiPMCut3;}
+
+        else if (run_starttime >= 1754892061) {min_muon_vals = MinMuonSiPMCut4;}
 
         // TTree *t = (TTree *) f->Get("wf");
         TTree* t = (TTree*)f->Get("tree");
@@ -941,6 +982,8 @@ int main(int argc, char *argv[])
 
                 if (iChan <= 11) {sphe_int = run_starttime * y_val[iChan] + b_val[iChan];}
 
+                if (run_starttime >= 1754892061 && iChan <= 11) {sphe_int = integralToPEF25S26[iChan];}
+
                 // h_wf->GetXaxis()->SetTitle("Time (1 bin = 16 ns)");
                 // h_wf->GetYaxis()->SetTitle("Counts");
                 // h_wf->Draw();
@@ -959,7 +1002,7 @@ int main(int argc, char *argv[])
 
                     }
 
-                    if (Ev61Energy > EV61_THRESHOLD) {
+                    if (Ev61Energy > ev61_min && Ev61Energy < ev61_max) {
 
                         all_chan_beam = true;
 
@@ -1368,7 +1411,7 @@ int main(int argc, char *argv[])
             avg_pulse.unix_time = run_starttime;
             avg_pulse.start = nsTime + pulse_start_time;                                                   // Need a way to weed out secondary pulses - use weighted average?
             avg_pulse.end = nsTime + pulse_end_time;
-            avg_pulse.energy = std::accumulate(all_chan_energy.begin(), all_chan_energy.end(), 0.0) / (currentHLmean / defaultHLmean);           // Integrals still sum over secondary peaks discarded in .start and .end values
+            avg_pulse.energy = (std::accumulate(all_chan_energy.begin(), all_chan_energy.end(), 0.0)) / (currentHLmean / defaultHLmean);            // * rot_up_corr           // Integrals still sum over secondary peaks discarded in .start and .end values
             avg_pulse.peak = std::accumulate(all_chan_peak.begin(), all_chan_peak.end(), 0.0);
             avg_pulse.number = num_chan_over_1phe;
             avg_pulse.beam = all_chan_beam;
@@ -1463,7 +1506,7 @@ int main(int argc, char *argv[])
 
             if (record_pulses && avg_pulse.trigger != 0 && avg_pulse.trigger != 4 && avg_pulse.trigger != 8 && avg_pulse.trigger != 16) {         // * (currentHLmean / defaultHLmean)
                 
-                if (avg_pulse.number >= 10 && avg_pulse.energy >= 50 && avg_pulse.start - last_event_time > echo_cut) {
+                if (avg_pulse.number >= 10 && avg_pulse.energy >= 30 && avg_pulse.start - last_event_time > echo_cut) {
 
                     avg_pulse.selection_cut = 1;
 
@@ -1511,7 +1554,7 @@ int main(int argc, char *argv[])
 
             }
 
-            if (record_pulses && avg_pulse.selection_cut >= 5) {
+            if (record_pulses && avg_pulse.selection_cut >= 6) {
 
                 // Record most recent low light LED event
 
@@ -1833,7 +1876,7 @@ int main(int argc, char *argv[])
 
             // Is this event a possible Michel event?
 
-            if (avg_pulse.number >= 10 && avg_pulse.energy >= 50 && avg_pulse.trigger != 4 && avg_pulse.trigger != 8 && avg_pulse.trigger != 16) {avg_pulse.last_det_time = avg_pulse.start; last_det_counter += 1;}         // * (currentHLmean / defaultHLmean)
+            if (avg_pulse.number >= 10 && avg_pulse.energy >= 30 && avg_pulse.trigger != 4 && avg_pulse.trigger != 8 && avg_pulse.trigger != 16) {avg_pulse.last_det_time = avg_pulse.start; last_det_counter += 1;}         // * (currentHLmean / defaultHLmean)
 
             last_event_time = avg_pulse.start; last_event_counter += 1;
 
@@ -1845,7 +1888,7 @@ int main(int argc, char *argv[])
 
                 deadtime_count += echo_cut;
                 
-                if (avg_pulse.number >= 10 && avg_pulse.energy >= 50) {
+                if (avg_pulse.number >= 10 && avg_pulse.energy >= 30) {
 
                     PMT_event_counter += 1;
 
@@ -1986,7 +2029,7 @@ int main(int argc, char *argv[])
     c_intlowLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intlowLED_%i.png", run));
     c_intlowLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intlowLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intlowLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intlowLED.png"));
     h_intlowLED->Reset();
 
     TCanvas* c_inthighLED = new TCanvas("c_inthighLED", "High Light LED Integral Values", 1200, 700);
@@ -2003,7 +2046,7 @@ int main(int argc, char *argv[])
     c_inthighLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_inthighLED_%i.png", run));
     c_inthighLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_inthighLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_inthighLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_inthighLED.png"));
     h_inthighLED->Reset();
 
     TCanvas* c_intminLED = new TCanvas("c_intminLED", "Min Bias LED Integral Values", 1200, 700);
@@ -2020,7 +2063,7 @@ int main(int argc, char *argv[])
     c_intminLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intminLED_%i.png", run));
     c_intminLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intminLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intminLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intminLED.png"));
     h_intminLED->Reset();
 
     cout << "\n" << "Total accumulated deadtime = " << deadtime_count << endl;

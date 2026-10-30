@@ -4,6 +4,7 @@
 #include <TH1D.h>
 #include <TH2D.h>
 #include <TPad.h>
+#include <TTreeIndex.h>
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -107,6 +108,8 @@ int main(int argc, char *argv[])
 
     std::vector<struct pulse> pulses;
 
+    std::vector<int> one_day_runs;
+
     int selection_cut_level = last_run;
 
     long long sample_range = 2 * pow(10, 4);
@@ -119,9 +122,11 @@ int main(int argc, char *argv[])
 
     long long iTime = 0.0;
 
-    long long hour12_st = 0.0;
+    long long hour24_st = 0.0;
 
     long long last_utime = 0.0;
+
+    double avg_detint = 0.0;
 
     double plot_min = 1000;          // -19960;
 
@@ -131,7 +136,13 @@ int main(int argc, char *argv[])
 
     double sample_bins = 250;
 
+    double ev61_offset = 2000;
+
     bool bt_LL_n_HL = false;
+
+    double last_file_num = 0.0;
+
+    double cumulative_MWhrs = 0.0;
 
     int num_events_low_dt = 0;
 
@@ -150,6 +161,8 @@ int main(int argc, char *argv[])
     int sample_window_events = 0;
 
     int hist_events = 0;
+
+    int run_events = 0;
 
     double tot_detint = 0;
 
@@ -173,9 +186,9 @@ int main(int argc, char *argv[])
 
     else if (!fall_is_true_spring_is_false) {
 
-        sample_range = 3 * pow(10, 4);
+        sample_range = 2 * pow(10, 4);
 
-        sample_bins = 375;
+        sample_bins = 250;
 
         plot_min = -19960;
 
@@ -187,7 +200,7 @@ int main(int argc, char *argv[])
 
     /* Initialize histograms */                 // NUMBER OF BINS SHOULD BE A MULTIPLE OF THE SMALLEST AXIS UNIT!!! (OR LENGTH OF AXIS DIVIDED BY SMALLEST AXIS UNIT?)
 
-    TH1D* h_dt_61 = new TH1D("h_dt_61", "Delta-T Between Sample Center and Background Peaks", num_bins, plot_min, plot_max);                                             // 1 bin = 160 ns
+    TH1D* h_dt_61 = new TH1D("h_dt_61", "Delta-T Between Sample Center and Background Peaks", 625, 0, 10000);                                                            // 1 bin = 160 ns
 
     TH1D* h_dt_61_1 = new TH1D("h_dt_61_1", "Delta-T Between Sample Center and Background Peaks", 625, - 1 * pow(10, 4), 1 * pow(10, 4));                                // 1 bin = 32 ns
 
@@ -197,7 +210,7 @@ int main(int argc, char *argv[])
 
     TH1D* h_dt_61_4 = new TH1D("h_dt_61_4", "Delta-T Between Sample Center and Background Peaks", 1250, - 10 * pow(10, 4), 10 * pow(10, 4));                             // 1 bin = 160 ns
 
-    TH2D* h_dt_v_detint = new TH2D("h_dt_v_detint", "Delta-T vs Detector Integral Value", sample_bins, - sample_range, sample_range, 100, 0, 2000);                      // 1 bin = 160 ns
+    TH2D* h_dt_v_detint = new TH2D("h_dt_v_detint", "Delta-T vs Detector Integral Value", sample_bins, - sample_range, sample_range, 50, 0, 500);                        // 1 bin = 160 ns
 
     TH2D* h_dt_v_tmuon = new TH2D("h_dt_v_tmuon", "Delta-T vs Most Recent Muon Time Difference", 1250, - 2 * sample_range, 2 * sample_range, 1000, 0, 2 * pow(10, 7));   // 1 bin = 32 ns
 
@@ -285,6 +298,14 @@ int main(int argc, char *argv[])
 
     // TH2D* h_sample_events = new TH2D("h_sample_events", "Background Statistics as a Function of Distance from Event 61", 100, 0, 100, 5, 0, 5);
 
+    TH1D* h_runnum = new TH1D("h_runnum", "SSB Run Number Distribution (0 - 10 us)", 100, 14000, 24000);
+
+    TH2D* h_runnum_v_dt = new TH2D("h_runnum_v_dt", "SSB Run Number vs Delta-T Between Event 61 and Detector Peaks", 100, 14000, 24000, sample_bins, - sample_range, sample_range);
+
+    TH2D* h_runnum_v_detint = new TH2D("h_runnum_v_detint", "SSB Run Number vs Detector Integral Value", 100, 14000, 24000, 50, 0, 500);
+
+    auto p_ks_test = new TGraph();
+
     /*std::vector<double> BackgroundIntVal;
 
     // Create a text string, which is used to output the text file
@@ -311,16 +332,63 @@ int main(int argc, char *argv[])
     
     TFile *f; 
     //your root file location here
-        if(gSystem->AccessPathName(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/int_trig_events/Event_Analysis_AllGR_%i.root", run))){           // Event_Analysis_24hrs_Run         // rootfiles_vprm/EventAnalysis_VP16_Run
+        if (gSystem->AccessPathName(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/int_trig_events/Event_Analysis_S25-S26_GR_%i.root", run))){         // Event_Analysis_F25-S26_GR_            // Event_Analysis_AllGR_30Phe_           // Event_Analysis_24hrs_Run         // rootfiles_vprm/EventAnalysis_VP16_Run
         //    if (gSystem->AccessPathName(Form("/data9/coherent/data/d2o/processedData/Event_Analysis_24hrs_Run%i.root", run))) {
-        //    if(gSystem->AccessPathName(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/Event_Analysis_24hrs_Run%i.root", run))){
+        //    if (gSystem->AccessPathName(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/Event_Analysis_24hrs_Run%i.root", run))){
         cout << "Could not open file" << endl;
         return -1; 
     } else{
-        f = new TFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/int_trig_events/Event_Analysis_AllGR_%i.root", run));         // Event_Analysis_24hrs_Run         // rootfiles_vprm/EventAnalysis_VP16_Run
+        f = new TFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/int_trig_events/Event_Analysis_S25-S26_GR_%i.root", run));           // Event_Analysis_F25-S26_GR_          // Event_Analysis_AllGR_30Phe_         // Event_Analysis_24hrs_Run         // rootfiles_vprm/EventAnalysis_VP16_Run
         //        f = new TFile(Form("/data9/coherent/data/d2o/processedData/Event_Analysis_24hrs_Run%i.root", run));
         //        f = new TFile(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/Event_Analysis_24hrs_Run%i.root", run));
     }
+
+    // Create a text string, which is used to output the text file
+
+    std::vector<double> MWhrPerRun_Runs;
+
+    std::vector<double> MWhrPerRun_MWhr;
+    
+    std::vector<double> num_vec;
+
+    string num_str;
+
+    string intval;
+
+    // Read from the text file
+
+    // ifstream ReadMWHFile("F24-S25_MWhrPerRun.txt");
+    ifstream ReadMWHFile("F24-S26_MWhrPerRun.txt");
+
+    // Use a while loop together with the getline() function to read the file line by line
+
+    while (getline(ReadMWHFile, intval)) {
+
+        num_vec.clear();
+
+        num_str.clear();
+
+        intval.push_back('\t');
+
+        for (char ch : intval) {
+            
+            if (ch != '\t') {num_str.push_back(ch);}
+            
+            else if (ch == '\t') {num_vec.push_back(stod(num_str)); num_str.clear();}
+        
+        }
+
+        MWhrPerRun_Runs.push_back(num_vec[0]);
+
+        MWhrPerRun_MWhr.push_back(num_vec[1]);
+        
+    }
+
+    // Close the file
+
+    ReadMWHFile.close();
+
+    ReadMWHFile.clear();
 
     TTree* t = (TTree*)f->Get("eventTree");
 
@@ -461,15 +529,21 @@ int main(int argc, char *argv[])
     Long64_t *br_bg;
     backgroundTree->Branch("bg", &br_bg, "bg/L");
 
+    // A virtual index so the code always iterates over the TTree in the correct order
+    t->BuildIndex("fnum", "entry");
+    TTreeIndex *evIndex = (TTreeIndex*)t->GetTreeIndex();
+    Long64_t *sortedEntries = evIndex->GetIndex();
+
     // Create and open a text file
-    ofstream BIFile(Form("Background_Integrals_Run%i.txt", run));
+    ofstream BIFile(Form("Background_Integrals_%i.txt", run));
     ofstream BERFile(Form("Background_Event_Rate_%i.txt", run));
     ofstream BITFile(Form("Background_Int_dt_%i.txt", run));
+    ofstream KSFile(Form("Background_KS_Test_%i.txt", run));
 
     for(int iEvent = 0; iEvent < t->GetEntries(); iEvent++){
 
-        Long64_t tentry = t->LoadTree(iEvent);
-
+        Long64_t tentry = t->LoadTree(sortedEntries[iEvent]);
+        
         b_fnum->GetEntry(tentry);
         b_entry->GetEntry(tentry);
         b_utime->GetEntry(tentry);
@@ -552,6 +626,32 @@ int main(int argc, char *argv[])
         avg_pulse.vp_int_23 = vpint23;
         avg_pulse.vp_int_top = vpinttop;
 
+        // if (avg_pulse.file_num > 28000) {continue;}          // Dividing line between F25 & S26
+
+        if (avg_pulse.file_num < 20000) {fall_is_true_spring_is_false = true; ev61_offset = 2000 - 625 - 200;}
+
+        else if (avg_pulse.file_num >= 20000 && avg_pulse.file_num < 24000) {fall_is_true_spring_is_false = false; ev61_offset = -19000 - 625 - 662;}
+
+        else if (avg_pulse.file_num >= 24000 && avg_pulse.file_num < 28000) {fall_is_true_spring_is_false = false; ev61_offset = -19000 - 625 - 662 + 67;}
+
+        else if (avg_pulse.file_num >= 28000) {fall_is_true_spring_is_false = false; ev61_offset = -19000 - 625 - 662 + 18;}
+
+        if (fall_is_true_spring_is_false) {
+
+            plot_min = 1000;
+
+            plot_max = 9960;
+
+        }
+
+        else if (!fall_is_true_spring_is_false) {
+
+            plot_min = -19960;
+
+            plot_max = -11000;
+
+        }
+
         /*
         
         Only looking for events between low light LED events and high light LED events
@@ -594,31 +694,37 @@ int main(int argc, char *argv[])
 
                     // Check if each event is within time range of current time counter value
 
-                    if (pulses[iVec].start >= iTime - sample_range && pulses[iVec].start <= iTime + sample_range) {
+                    long long eventstarttime = pulses[iVec].start - ev61_offset;
+
+                    if (eventstarttime >= iTime - sample_range && eventstarttime <= iTime + sample_range) {
 
                         sample_window_events += 1;
 
                         // Plot histograms
 
-                        if ((pulses[iVec].start - iTime) >= -10000 && (pulses[iVec].start - iTime) <= 10000) {num_events_low_dt += 1; h_detint_low_dt->Fill(pulses[iVec].energy); h_avpint_low_dt->Fill(pulses[iVec].all_vp_energy);}
+                        if ((eventstarttime - iTime) >= -10000 && (eventstarttime - iTime) <= 10000) {num_events_low_dt += 1; h_detint_low_dt->Fill(pulses[iVec].energy); h_avpint_low_dt->Fill(pulses[iVec].all_vp_energy);}
             
-                        if ((pulses[iVec].start - iTime) > -500 && (pulses[iVec].start - iTime) < 500) {num_events_low_dt_cent_spike += 1; h_int_cent_spike->Fill(pulses[iVec].energy); h_avpint_cent_spike->Fill(pulses[iVec].all_vp_energy); h_svpint_cent_spike->Fill(pulses[iVec].side_vp_energy); h_tvpint_cent_spike->Fill(pulses[iVec].top_vp_energy);}
+                        if ((eventstarttime - iTime) > -500 && (eventstarttime - iTime) < 500) {num_events_low_dt_cent_spike += 1; h_int_cent_spike->Fill(pulses[iVec].energy); h_avpint_cent_spike->Fill(pulses[iVec].all_vp_energy); h_svpint_cent_spike->Fill(pulses[iVec].side_vp_energy); h_tvpint_cent_spike->Fill(pulses[iVec].top_vp_energy);}
 
-                        else if ((pulses[iVec].start - iTime) <= -500 && (pulses[iVec].start - iTime) >= -10000) {num_events_low_dt_no_spike_neg += 1; h_int_neg_low_dt->Fill(pulses[iVec].energy); h_avpint_neg_low_dt->Fill(pulses[iVec].all_vp_energy); h_svpint_neg_low_dt->Fill(pulses[iVec].side_vp_energy); h_tvpint_neg_low_dt->Fill(pulses[iVec].top_vp_energy);}
+                        else if ((eventstarttime - iTime) <= -500 && (eventstarttime - iTime) >= -10000) {num_events_low_dt_no_spike_neg += 1; h_int_neg_low_dt->Fill(pulses[iVec].energy); h_avpint_neg_low_dt->Fill(pulses[iVec].all_vp_energy); h_svpint_neg_low_dt->Fill(pulses[iVec].side_vp_energy); h_tvpint_neg_low_dt->Fill(pulses[iVec].top_vp_energy);}
 
-                        else if ((pulses[iVec].start - iTime) >= 500 && (pulses[iVec].start - iTime) <= 10000) {num_events_low_dt_no_spike_pos += 1; h_int_pos_low_dt->Fill(pulses[iVec].energy); h_avpint_pos_low_dt->Fill(pulses[iVec].all_vp_energy); h_svpint_pos_low_dt->Fill(pulses[iVec].side_vp_energy); h_tvpint_pos_low_dt->Fill(pulses[iVec].top_vp_energy);}
+                        else if ((eventstarttime - iTime) >= 500 && (eventstarttime - iTime) <= 10000) {num_events_low_dt_no_spike_pos += 1; h_int_pos_low_dt->Fill(pulses[iVec].energy); h_avpint_pos_low_dt->Fill(pulses[iVec].all_vp_energy); h_svpint_pos_low_dt->Fill(pulses[iVec].side_vp_energy); h_tvpint_pos_low_dt->Fill(pulses[iVec].top_vp_energy);}
 
                         if (pulses[iVec].energy > 200 && pulses[iVec].energy < 400) {h_slice_vpintavg->Fill(avg_pulse.all_vp_energy / 9);}
 
-                        if (pulses[iVec].start - iTime >= plot_min && pulses[iVec].start - iTime <= plot_max) {
+                        if (eventstarttime - iTime >= 0 && eventstarttime - iTime <= 10000) {
 
                             hist_events += 1;
 
+                            run_events += 1;
+
                             tot_detint += pulses[iVec].energy;
 
-                            h_dt_61->Fill(pulses[iVec].start - iTime);
+                            h_runnum->Fill(pulses[iVec].file_num);
 
-                            // h_detint->Fill(pulses[iVec].energy);
+                            h_dt_61->Fill(eventstarttime - iTime);
+
+                            h_detint->Fill(pulses[iVec].energy);
 
                             if (pulses[iVec].selection_cut >= 1) {h_detint_1->Fill(pulses[iVec].energy);}
 
@@ -639,24 +745,28 @@ int main(int argc, char *argv[])
                             backgroundTree->Fill();
                             
                         }
+
+                        h_runnum_v_dt->Fill(pulses[iVec].file_num, eventstarttime - iTime);
+
+                        h_runnum_v_detint->Fill(pulses[iVec].file_num, pulses[iVec].energy);
                         
-                        h_dt_61_1->Fill(pulses[iVec].start - iTime);
+                        h_dt_61_1->Fill(eventstarttime - iTime);
 
-                        h_dt_61_2->Fill(pulses[iVec].start - iTime);
+                        h_dt_61_2->Fill(eventstarttime - iTime);
 
-                        h_dt_61_3->Fill(pulses[iVec].start - iTime);
+                        h_dt_61_3->Fill(eventstarttime - iTime);
 
-                        h_dt_61_4->Fill(pulses[iVec].start - iTime);
+                        h_dt_61_4->Fill(eventstarttime - iTime);
 
-                        h_dt_v_tmuon->Fill(pulses[iVec].start - iTime, pulses[iVec].start - pulses[iVec].last_cosmics_time);
+                        h_dt_v_tmuon->Fill(eventstarttime - iTime, eventstarttime - pulses[iVec].last_cosmics_time);
 
-                        h_dt_v_tdet->Fill(pulses[iVec].start - iTime, pulses[iVec].start - pulses[iVec].last_det_time);
+                        h_dt_v_tdet->Fill(eventstarttime - iTime, eventstarttime - pulses[iVec].last_det_time);
 
-                        h_detint->Fill(pulses[iVec].energy);
+                        // h_detint->Fill(pulses[iVec].energy);
 
-                        h_dt_v_detint->Fill(pulses[iVec].start - iTime, pulses[iVec].energy);
+                        h_dt_v_detint->Fill(eventstarttime - iTime, pulses[iVec].energy);
 
-                        BITFile << pulses[iVec].start - iTime << "\t" << pulses[iVec].energy << "\n";
+                        BITFile << eventstarttime - iTime << "\t" << pulses[iVec].energy << "\n";
 
                         h_vpint_16->Fill(pulses[iVec].vp_int_16); // if (pulses[iVec].vp_int_16 > 150) {h_vpint_16->Fill(pulses[iVec].vp_int_16);}          // pulses[iVec].vp_start_16 != 0
 
@@ -702,21 +812,49 @@ int main(int argc, char *argv[])
 
         h_int->Fill(avg_pulse.energy);
 
-        if (avg_pulse.unix_time != last_utime) {run_counter += 1;}
+        avg_detint = tot_detint * pow(hist_events, -1);
 
-        if (run_counter == 12) {hour12_st = avg_pulse.unix_time;}
+        if (avg_pulse.unix_time != last_utime) {run_counter += 1; one_day_runs.push_back(avg_pulse.file_num);}
+
+        if (run_counter == 24) {
+            
+            hour24_st = avg_pulse.unix_time;
+
+            // if (hour24_st == 1757646062) {cout << "\n" << "9/12/25 run numbers: "; for(int iRuns = 0; iRuns < one_day_runs.size(); iRuns++) {cout << one_day_runs[iRuns] << " ";} cout << endl;}
+
+            // if (hour24_st == 1759086061) {cout << "\n" << "9/28/25 run numbers: "; for(int iRuns = 0; iRuns < one_day_runs.size(); iRuns++) {cout << one_day_runs[iRuns] << " ";} cout << endl;}
+
+            // Write to the file
+
+            BIFile << hour24_st << "\t" << avg_detint << "\n";
+
+            BERFile << hour24_st << "\t" << hist_events << "\n";
+
+            run_counter = 0; tot_detint = 0; hist_events = 0; one_day_runs.clear();
+        
+        }
 
         last_utime = avg_pulse.unix_time;
 
+        if (avg_pulse.file_num != last_file_num) {
+
+            auto run_num_it = find(MWhrPerRun_Runs.begin(), MWhrPerRun_Runs.end(), avg_pulse.file_num);
+
+            int run_num_index = distance(MWhrPerRun_Runs.begin(), run_num_it);
+
+            cumulative_MWhrs += MWhrPerRun_MWhr[run_num_index];
+            
+            p_ks_test->AddPoint(cumulative_MWhrs, run_events);
+
+            KSFile << avg_pulse.file_num << "\t" << MWhrPerRun_MWhr[run_num_index] << "\t" << run_events << "\n";
+
+            run_events = 0;
+        
+        }
+
+        last_file_num = avg_pulse.file_num;
+
     } // Event loop
-
-    double avg_detint = tot_detint * pow(hist_events, -1);
-
-    // Write to the file
-
-    BIFile << hour12_st << "\t" << avg_detint << "\n";
-
-    BERFile << hour12_st << "\t" << hist_events << "\n";
 
     // Close the file
 
@@ -753,6 +891,64 @@ int main(int argc, char *argv[])
     cout << "\n" << "Number of runs in ROOT file, Runs " << run << " = " << run_counter << "\n" << endl;
 
     /* Fill & plot histograms */
+
+    p_ks_test->SetTitle("KS Test: Cumulative MWhr per SSB Event Rate");
+    p_ks_test->GetXaxis()->SetTitle("Cumulative MWhr");
+    p_ks_test->GetYaxis()->SetTitle("Cumulative SSB Event Rate");
+    p_ks_test->Draw("A*");
+    // p_ks_test->GetXaxis()->SetLimits(2600, 3600);
+    // p_ks_test->SetMinimum(50);
+    // p_ks_test->SetMaximum(75);
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/p_ks_test_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/p_ks_test_%i.png", run));
+
+    TCanvas* c_runnum = new TCanvas("c_runnum", "SSB Run Numbers", 1200, 700);
+    // c_runnum->SetLogy();
+    c_runnum->cd();
+    h_runnum->GetXaxis()->SetTitle("Run Number");
+    h_runnum->GetYaxis()->SetTitle("Counts");
+    // h_runnum->SetMinimum(1);
+    // h_runnum->SetMaximum(50);
+    h_runnum->Draw();
+    h_runnum->SetLineColor(1);
+    c_runnum->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_runnum_%i.png", run));
+    // c_runnum->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_runnum.png");
+    c_runnum->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_runnum.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_runnum.png"));
+    h_runnum->Reset();
+
+    TCanvas* c_runnum_v_dt = new TCanvas("c_runnum_v_dt", "SSB Run Number vs dt", 1200, 700);
+    // c_runnum_v_dt->SetLogy();
+    c_runnum_v_dt->cd();
+    h_runnum_v_dt->GetXaxis()->SetTitle("Run Number");
+    h_runnum_v_dt->GetYaxis()->SetTitle("Delta-T (ns)");
+    // h_runnum_v_dt->SetMinimum(1);
+    // h_runnum_v_dt->SetMaximum(50);
+    h_runnum_v_dt->Draw();
+    // h_runnum_v_dt->SetLineColor(1);
+    c_runnum_v_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_runnum_v_dt_%i.png", run));
+    // c_runnum_v_dt->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_runnum_v_dt.png");
+    c_runnum_v_dt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_runnum_v_dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_runnum_v_dt.png"));
+    h_runnum_v_dt->Reset();
+
+    TCanvas* c_runnum_v_detint = new TCanvas("c_runnum_v_detint", "SSB Run Number vs Integral", 1200, 700);
+    // c_runnum_v_detint->SetLogy();
+    c_runnum_v_detint->cd();
+    h_runnum_v_detint->GetXaxis()->SetTitle("Run Number");
+    h_runnum_v_detint->GetYaxis()->SetTitle("Integral (Ph.e.)");
+    // h_runnum_v_detint->SetMinimum(1);
+    // h_runnum_v_detint->SetMaximum(50);
+    h_runnum_v_detint->Draw();
+    // h_runnum_v_detint->SetLineColor(1);
+    c_runnum_v_detint->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_runnum_v_detint_%i.png", run));
+    // c_runnum_v_detint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_runnum_v_detint.png");
+    c_runnum_v_detint->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_runnum_v_detint.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_runnum_v_detint.png"));
+    h_runnum_v_detint->Reset();
 
     TCanvas* c_dt_61 = new TCanvas("c_dt_61", "Delta-T Between Event 61 and Detector Events", 900, 700);
     // c_dt_61->SetLogy();
@@ -852,9 +1048,9 @@ int main(int argc, char *argv[])
     c_detint->cd();
     h_detint->GetXaxis()->SetTitle("Integral (Ph.e.)");
     h_detint->GetYaxis()->SetTitle("Counts");
-    h_detint->SetMinimum(1);
-    h_detint->SetMaximum(20000);
-    h_detint->SetLineColor(kBlue);
+    // h_detint->SetMinimum(1);
+    // h_detint->SetMaximum(20000);
+    // h_detint->SetLineColor(kBlue);
     h_detint->Draw();
     TLatex *lat_detint = new TLatex(0.6, 0.7, Form("Average background energy = %.2f", avg_detint));
     lat_detint->SetNDC();
@@ -874,7 +1070,7 @@ int main(int argc, char *argv[])
     h_detint_1->GetXaxis()->SetTitle("Integral (Ph.e.)");
     h_detint_1->GetYaxis()->SetTitle("Counts");
     h_detint_1->SetMinimum(1);
-    h_detint_1->SetMaximum(5000);
+    // h_detint_1->SetMaximum(5000);
     h_detint_1->Draw("same");
     h_detint_1->SetLineColor(1);
     h_detint_2->Draw("same");

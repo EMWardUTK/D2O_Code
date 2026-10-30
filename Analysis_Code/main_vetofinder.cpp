@@ -127,6 +127,10 @@ std::vector<double> MichelSiPMNoiseAvg5{ 214.9131176,219.8434706,227.0522353,211
 
 std::vector<double> MichelSiPMNoiseAvg6{ 202.2175,214.0718,190.558875,202.427125,209.80825,212.1195,195.1185,225.44875,227.461 };                               // May 24, 2025 - Aug 23, 2025
 
+std::vector<double> MichelSiPMNoiseAvg7{ 201.0280968,219.3897823,216.1231694,207.7725242,209.4667177,215.816371,227.0340161,231.9643629,268.8965081 };          // Aug 11, 2025 - Jun 24, 2026
+
+std::vector<double> integralToPEF25S26{ 104.1735026,102.1484265,105.5107949,100.8622726,107.9768889,108.4633248,107.4503248,106.1125983,104.1273932,112.0,105.3396068,104.9230085 };            // Aug 11, 2025 - Jun 24, 2026
+
 template<typename T>
 double getAverage(std::vector<T> const& v) {
 
@@ -319,9 +323,16 @@ int main(int argc, char *argv[])
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/sum2024goldenrunlist/sum2024goldenrunlist_%i.txt", run));
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/2024allgoldenruns/2024allgoldenruns_%i.txt", run));
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/weekly2024goldenruns/weekly2024goldenruns_%i.txt", run));
-    ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/allweeklyruns/allweeklyruns_%i.txt", run));           // 1-46: 2023-2024; 47-62: Fall 2024; 63-82: Spring 2025; 83-94: Summer 2025 (Beam Off)
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/allweeklyruns/allweeklyruns_%i.txt", run));           // 1-46: 2023-2024; 47-62: Fall 2024; 63-82: Spring 2025; 83-94: Summer 2025 (Beam Off)
     // 16151-16174 = 1721442002-1721524801 = 7/19/24-7/20/24 = file ~48 // 16351-16374 = 1722090001-1722172801 = 7/27/24-7/28/24 = file ~49
     // 16647-16671 = 1723155601-1723242001 = 8/08/24-8/09/24 = file 50  // 16855-16878 = 1723870861-1723953661 = 8/17/24-8/18/24 = file 51
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F24-S25_GR_Runs/F24-S25_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F24-S25_BO_Runs/F24-S25_BO_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Runs_4084GR/F25-S26_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Weekly_4084GR/F25-S26_GR_Weekly_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Runs_6235GR/S25-S26_GR_%i.txt", run));
+    ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Weekly_6149GR/S25-S26_GR_Weekly_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25F25S26_GR_3_rand_days_%i.txt", run));
 
     // Use a while loop together with the getline() function to read the file line by line
 
@@ -335,7 +346,7 @@ int main(int argc, char *argv[])
 
         iLine += 1;
 
-        if (iLine == 24) {break;}
+        // if (iLine == 24) {break;}
         
     }
     
@@ -355,7 +366,10 @@ int main(int argc, char *argv[])
 
     // Read from the text file
 
-    ifstream ReadHLMFile("hl_mean_val_all_1.txt");
+    // To use F24-S25 data, delete "_F25-S26_GR"
+    // To use F25-S26 data, add "_F25-S26_GR" before "_1-124"
+    // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Vals.txt");          // Vertical_Muon_Peak_Center_1-124_Val_Only.txt         // hl_mean_val_all_1.txt          // hl_mean_val_all_temp.txt
+    ifstream ReadHLMFile("Vertical_Muon_Peak_Center_F25-S26_GR_1-124_Run_Vals.txt");
 
     // Use a while loop together with the getline() function to read the file line by line
 
@@ -371,7 +385,7 @@ int main(int argc, char *argv[])
         
     }
 
-    double defaultHLmean = sumHLmean / HLmeancounter;
+    double defaultHLmean = 1813.94;         // = 1613.271109; (F25-S26 Vert Muon Mean Value)           // = 1813.94; (12/1/24 Vert Muon Mean Value)         // = 34.5323; (11/26/24 HL Mean Value)         // sumHLmean / HLmeancounter;           // sumHLmean / HLmeancounter = 1783.874 (Averaged value)
 
     double currentHLmean = defaultHLmean;
 
@@ -429,6 +443,12 @@ int main(int argc, char *argv[])
 
         else if (run_iterable >= 15696) {data_num = 41; vers_num = 5;}
 
+        int ev61_min = 1200; int ev61_max = 2000;
+
+        if (run_iterable < 24813) {ev61_min = 1200; ev61_max = 2000;}
+
+        else if (run_iterable >= 24813) {ev61_min = 700; ev61_max = 1000;}
+
         bool old_channel_map = false; int Event61Chan = 15; int SiPM1Chan = 16; int SiPM2Chan = 17; int SiPM3Chan = 18; int SiPM4Chan = 19; int SiPM5Chan = 20; int SiPM6Chan = 21; int SiPM7Chan = 22; int SiPM8Chan = 23; int SiPM9Chan = 24; int SiPM10Chan = 25;
 
         if (vers_num < 5) {old_channel_map = true; Event61Chan = 15; SiPM1Chan = 16; SiPM2Chan = 17; SiPM3Chan = 18; SiPM4Chan = 19; SiPM5Chan = 20; SiPM6Chan = 21; SiPM7Chan = 22; SiPM8Chan = 23; SiPM9Chan = 24; SiPM10Chan = 25;}
@@ -458,17 +478,20 @@ int main(int argc, char *argv[])
 
         num_vec.clear();
 
-        string intval2;
-
         string num_str;
-
-        intval2.clear();
 
         num_str.clear();
 
+        string intval2;
+
         // Read from the text file
 
-        ifstream ReadHLMFile("hl_mean_val_look_up_1.txt");
+        // To use F24-S25 data, delete "_F25-S26_GR"
+        // To use F25-S26 data, add "_F25-S26_GR" before "_1-124"
+        // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Nums.txt");          // Vertical_Muon_Peak_Center_1-124_No_HL_Mean_Correction.txt          // hl_mean_val_look_up_1.txt          // hl_mean_val_look_up_temp.txt
+        // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_F25-S26_GR_1-124_Run_Nums.txt");
+        // Runs 16830 - 32398 (F24-S26)
+        ifstream ReadHLMFile("Vertical_Muon_Peak_Center_All_F24-S26_GR_Run_Nums.txt");
 
         // Use a while loop together with the getline() function to read the file line by line
 
@@ -488,6 +511,8 @@ int main(int argc, char *argv[])
             
             }
 
+            // cout << "\n" << "num_vec[0] = " << num_vec[0] << " num_vec[1] =  " << num_vec[1] << " num_vec.size() =  " << num_vec.size() << endl;
+
             if (num_vec[0] == run_iterable && num_vec[1] > 0.0) {
 
                 // Output the text from the file
@@ -498,11 +523,21 @@ int main(int argc, char *argv[])
             
         }
 
+        // if (run_iterable < 24813) {defaultHLmean = 1813.94;}           // = 1813.94; (12/1/24 Vert Muon Mean Value)
+
+        // else if (run_iterable >= 24813) {defaultHLmean = 1613.271109;}         // = 1613.271109; (F25-S26 Vert Muon Mean Value)
+
         // Close the file
 
         ReadHLMFile.close();
 
         ReadHLMFile.clear();
+
+        // Experimental rotational correction, to correct for Michel integral change over time leftover/created by vertical muon correction
+
+        double rot_up_corr = run_starttime * 0.00000000042694381419 + 0.2600815812;
+
+        double rot_down_corr = run_starttime * -0.00000000060991973456 + 2.0570263125;
 
         // Create a text string, which is used to output the text file
 
@@ -590,7 +625,9 @@ int main(int argc, char *argv[])
 
         else if (run_starttime > 1734260462 && run_starttime <= 1748775661) {vp_cut_vals = MichelSiPMNoiseAvg5;}
 
-        else if (run_starttime > 1748775661) {vp_cut_vals = MichelSiPMNoiseAvg6;}
+        else if (run_starttime > 1748775661 && run_starttime < 1754892061) {vp_cut_vals = MichelSiPMNoiseAvg6;}
+
+        else if (run_starttime >= 1754892061) {vp_cut_vals = MichelSiPMNoiseAvg7;}
 
         // TTree *t = (TTree *) f->Get("wf");
         TTree* t = (TTree*)f->Get("tree");
@@ -898,6 +935,8 @@ int main(int argc, char *argv[])
 
                 if (iChan <= 11) {sphe_int = run_starttime * y_val[iChan] + b_val[iChan];}
 
+                if (run_starttime >= 1754892061 && iChan <= 11) {sphe_int = integralToPEF25S26[iChan];}
+
                 // h_wf->GetXaxis()->SetTitle("Time (1 bin = 16 ns)");
                 // h_wf->GetYaxis()->SetTitle("Counts");
                 // h_wf->Draw();
@@ -920,7 +959,7 @@ int main(int argc, char *argv[])
 
                     }
 
-                    if (Ev61Energy > EV61_THRESHOLD) {
+                    if (Ev61Energy > ev61_min && Ev61Energy < ev61_max) {
 
                         all_chan_beam = true;
 
@@ -1048,7 +1087,7 @@ int main(int argc, char *argv[])
 
                             // if (iChan >= SiPM1Chan && iChan <= SiPM10Chan)
 
-                            // if (iChan == Event61Chan && Ev61Energy > EV61_THRESHOLD) {h_peak_time_vs_amp_ratio_EV61->Fill(peakBin * 16., peak); h_int_ev61->Fill(Ev61Energy, peak); if (p.start > 500 && p.start < 700 && peak > 300 && peak < 320) {cout << "\n" << "Event 61 triggered event: Run, Event Number, Channel Number, Amplitude & p.start Value = " << run_iterable << " " << iEnt << " " << iChan << " " << peak << " " << p.start << endl;}}          // if (p.start >= 304 && p.start <= 400 && peak < 40) {cout << "\n" << "Checkered SiPM event: Run, Event Number, Channel Number & p.start Value = " << run_iterable << " " << iEnt << " " << iChan << " " << p.start << endl;}}         // if (p.start >= 224 && p.start <= 256 && iBinContent / peak > 0.2) {h_weird_events_tB->Fill(triggerBits); cout << "\n" << "Disappearing event: Run, Event Number & triggerBits Value = " << run_iterable << " " << iEnt << " " << triggerBits << endl;}}           // if (p.start == 16) {cout << "\n" << "p.start == 16 pulse, Run & Event Number = " << run_iterable << " " << iEnt << endl;} if (p.start == 32) {cout << "\n" << "p.start == 32 pulse, Run & Event Number = " << run_iterable << " " << iEnt << endl;}}
+                            // if (iChan == Event61Chan && Ev61Energy > ev61_min && Ev61Energy < ev61_max) {h_peak_time_vs_amp_ratio_EV61->Fill(peakBin * 16., peak); h_int_ev61->Fill(Ev61Energy, peak); if (p.start > 500 && p.start < 700 && peak > 300 && peak < 320) {cout << "\n" << "Event 61 triggered event: Run, Event Number, Channel Number, Amplitude & p.start Value = " << run_iterable << " " << iEnt << " " << iChan << " " << peak << " " << p.start << endl;}}          // if (p.start >= 304 && p.start <= 400 && peak < 40) {cout << "\n" << "Checkered SiPM event: Run, Event Number, Channel Number & p.start Value = " << run_iterable << " " << iEnt << " " << iChan << " " << p.start << endl;}}         // if (p.start >= 224 && p.start <= 256 && iBinContent / peak > 0.2) {h_weird_events_tB->Fill(triggerBits); cout << "\n" << "Disappearing event: Run, Event Number & triggerBits Value = " << run_iterable << " " << iEnt << " " << triggerBits << endl;}}           // if (p.start == 16) {cout << "\n" << "p.start == 16 pulse, Run & Event Number = " << run_iterable << " " << iEnt << endl;} if (p.start == 32) {cout << "\n" << "p.start == 32 pulse, Run & Event Number = " << run_iterable << " " << iEnt << endl;}}
 
                             // if (iChan <= 11) {h_peak_time_vs_amp_ratio_PMT->Fill(peakBin * 16., peak);}               // if (counter < 100 && p.start >= 384 && p.start <= 464 && peak > 800 && peak < 900) {counter += 1; cout << "\n" << "Checkered PMT event: Run, Event Number, Channel Number & p.start Value = " << run_iterable << " " << iEnt << " " << iChan << " " << p.start << endl;}}
                             
@@ -1338,9 +1377,9 @@ int main(int argc, char *argv[])
 
             for (size_t iPeak = 0; iPeak < all_chan_start_vp_adj.size(); iPeak++) {h_peak_time_vs_amp_ratio_VP->Fill(all_chan_start_vp_adj[iPeak], all_chan_peak_vp_adj[iPeak]);}
 
-            if (Ev61Energy > EV61_THRESHOLD) {h_ev61_pst_on->Fill(chan_15_start_adj); h_ev61_pst_all->Fill(chan_15_start); h_ev61_pst_adj_vs_not->Fill(chan_15_start_adj, chan_15_start); h_peak_time_vs_amp_ratio_EV61->Fill(chan_15_start_adj, Ev61Peak); h_int_ev61->Fill(Ev61Energy, Ev61Peak);}         // if (counter < 1000) {counter += 1; cout << "\n" << "Event 61 plot event: Run, Event Number, Amplitude, chan_15_start_adj, chan_15_start, first_peak_time & triggerBits Value = " << run_iterable << " " << iEnt << " " << Ev61Peak << " " << chan_15_start_adj << " " << chan_15_start << " " << first_peak_time << " " << triggerBits << endl;}}
+            if (Ev61Energy > ev61_min && Ev61Energy < ev61_max) {h_ev61_pst_on->Fill(chan_15_start_adj); h_ev61_pst_all->Fill(chan_15_start); h_ev61_pst_adj_vs_not->Fill(chan_15_start_adj, chan_15_start); h_peak_time_vs_amp_ratio_EV61->Fill(chan_15_start_adj, Ev61Peak); h_int_ev61->Fill(Ev61Energy, Ev61Peak);}         // if (counter < 1000) {counter += 1; cout << "\n" << "Event 61 plot event: Run, Event Number, Amplitude, chan_15_start_adj, chan_15_start, first_peak_time & triggerBits Value = " << run_iterable << " " << iEnt << " " << Ev61Peak << " " << chan_15_start_adj << " " << chan_15_start << " " << first_peak_time << " " << triggerBits << endl;}}
             
-            // if (counter < 1000 && Ev61Energy > EV61_THRESHOLD && chan_15_start_adj >= 400 && chan_15_start_adj < 700) {counter += 1; cout << "\n" << "Run, Event Number, triggerBits Value, chan_15_start, chan_15_start_adj = " << run_iterable << " " << iEnt << " " << triggerBits << " " << chan_15_start << " " << chan_15_start_adj << endl;}
+            // if (counter < 1000 && Ev61Energy > ev61_min && Ev61Energy < ev61_max && chan_15_start_adj >= 400 && chan_15_start_adj < 700) {counter += 1; cout << "\n" << "Run, Event Number, triggerBits Value, chan_15_start, chan_15_start_adj = " << run_iterable << " " << iEnt << " " << triggerBits << " " << chan_15_start << " " << chan_15_start_adj << endl;}
             
             if (num_chan_over_1phe >= 10) {int pulse_start_index = mostFrequentIndex(all_chan_start_pmt);}
 
@@ -1388,7 +1427,7 @@ int main(int argc, char *argv[])
             avg_pulse.vp_int_top = p_int_24 + p_int_25;
             avg_pulse.vp_amp_ratio = getAverage(ttp_amp_ratio);
 
-            if (chan_15_start_adj != 1000.0 && Ev61Energy > EV61_THRESHOLD) {           // last_ev61_plus && triggerBits == 1         // last_ev61_only && (triggerBits == 3 || triggerBits == 33 || triggerBits == 35) &&          // chan_15_start_adj != 0.0 && Ev61Peak != 0.0 && 
+            if (chan_15_start_adj != 1000.0 && Ev61Energy > ev61_min && Ev61Energy < ev61_max) {           // last_ev61_plus && triggerBits == 1         // last_ev61_only && (triggerBits == 3 || triggerBits == 33 || triggerBits == 35) &&          // chan_15_start_adj != 0.0 && Ev61Peak != 0.0 && 
                     
                 h_ev61_dt_adj->Fill(nsTime + chan_15_start_adj - last_ev61_peak_time_adj);
 
@@ -1770,7 +1809,7 @@ int main(int argc, char *argv[])
 
             // Is this event an internally triggered event?
 
-            if (avg_pulse.number >= 10 && avg_pulse.energy >= 50 && avg_pulse.trigger != 4 && avg_pulse.trigger != 8 && avg_pulse.trigger != 16) {avg_pulse.last_det_time = avg_pulse.start;}
+            if (avg_pulse.number >= 10 && avg_pulse.energy >= 30 && avg_pulse.trigger != 4 && avg_pulse.trigger != 8 && avg_pulse.trigger != 16) {avg_pulse.last_det_time = avg_pulse.start;}
 
             // Reset variables at end of loop
 
@@ -1847,174 +1886,172 @@ int main(int argc, char *argv[])
 
     } // Run loop
 
-    if (run != 11241 && run != 12636) {             // run == 7894 || run == 10760 || run == 13730 || run == 14233 || run == 14700 || run == 14726 || run == 14809) {
-        /*
-        TCanvas* c_peak_to_tail_amp_ratio = new TCanvas("c_peak_to_tail_amp_ratio", "Tail-to-Peak Amp Ratio", 1200, 700);
-        c_peak_to_tail_amp_ratio->SetLogy();
-        c_peak_to_tail_amp_ratio->cd();
-        h_peak_to_tail_amp_ratio->GetXaxis()->SetTitle("Amplitude Ratio");
-        h_peak_to_tail_amp_ratio->GetYaxis()->SetTitle("Counts");
-        h_peak_to_tail_amp_ratio->Draw();
-        c_peak_to_tail_amp_ratio->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_peak_to_tail_amp_ratio_%i.png", run));
-        // c_peak_to_tail_amp_ratio->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_peak_to_tail_amp_ratio.png");
-        c_peak_to_tail_amp_ratio->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_to_tail_amp_ratio.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_to_tail_amp_ratio.png"));
-        h_peak_to_tail_amp_ratio->Reset();
-        */
-        TCanvas* c_ev61_dt_not = new TCanvas("c_ev61_dt_not", "Ev61 Peak Time", 1200, 700);
-        c_ev61_dt_not->SetLogy();
-        c_ev61_dt_not->cd();
-        h_ev61_dt_not->GetXaxis()->SetTitle("Event 61 dt (ns)");
-        h_ev61_dt_not->GetYaxis()->SetTitle("Counts");
-        h_ev61_dt_not->Draw("same");
-        h_ev61_dt_not->SetLineColor(kBlue);
-        h_ev61_dt_adj->Draw("same");
-        h_ev61_dt_adj->SetLineColor(kRed);
-        TLegend *leg_ev61_dt = new TLegend(0.9, 0.65, 0.65, 0.45);
-        leg_ev61_dt->AddEntry(h_ev61_dt_adj, "Time Adjusted", "l");
-        leg_ev61_dt->AddEntry(h_ev61_dt_not, "Not Adjusted", "l");
-        leg_ev61_dt->Draw();
-        c_ev61_dt_not->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_ev61_dt_not_%i.png", run));
-        // c_ev61_dt_not->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_ev61_dt_not.png");
-        c_ev61_dt_not->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_dt_not.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_dt_not.png"));
-        h_ev61_dt_not->Reset();
+    /*
+    TCanvas* c_peak_to_tail_amp_ratio = new TCanvas("c_peak_to_tail_amp_ratio", "Tail-to-Peak Amp Ratio", 1200, 700);
+    c_peak_to_tail_amp_ratio->SetLogy();
+    c_peak_to_tail_amp_ratio->cd();
+    h_peak_to_tail_amp_ratio->GetXaxis()->SetTitle("Amplitude Ratio");
+    h_peak_to_tail_amp_ratio->GetYaxis()->SetTitle("Counts");
+    h_peak_to_tail_amp_ratio->Draw();
+    c_peak_to_tail_amp_ratio->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_peak_to_tail_amp_ratio_%i.png", run));
+    // c_peak_to_tail_amp_ratio->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_peak_to_tail_amp_ratio.png");
+    c_peak_to_tail_amp_ratio->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_to_tail_amp_ratio.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_to_tail_amp_ratio.png"));
+    h_peak_to_tail_amp_ratio->Reset();
+    */
+    TCanvas* c_ev61_dt_not = new TCanvas("c_ev61_dt_not", "Ev61 Peak Time", 1200, 700);
+    c_ev61_dt_not->SetLogy();
+    c_ev61_dt_not->cd();
+    h_ev61_dt_not->GetXaxis()->SetTitle("Event 61 dt (ns)");
+    h_ev61_dt_not->GetYaxis()->SetTitle("Counts");
+    h_ev61_dt_not->Draw("same");
+    h_ev61_dt_not->SetLineColor(kBlue);
+    h_ev61_dt_adj->Draw("same");
+    h_ev61_dt_adj->SetLineColor(kRed);
+    TLegend *leg_ev61_dt = new TLegend(0.9, 0.65, 0.65, 0.45);
+    leg_ev61_dt->AddEntry(h_ev61_dt_adj, "Time Adjusted", "l");
+    leg_ev61_dt->AddEntry(h_ev61_dt_not, "Not Adjusted", "l");
+    leg_ev61_dt->Draw();
+    c_ev61_dt_not->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61_dt_not_%i.png", run));
+    // c_ev61_dt_not->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61_dt_not.png");
+    c_ev61_dt_not->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_dt_not.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_dt_not.png"));
+    h_ev61_dt_not->Reset();
 
-        TCanvas* c_ev61_pst_all = new TCanvas("c_ev61_pst_all", "Ev61 Peak Time", 1200, 700);
-        c_ev61_pst_all->SetLogy();
-        c_ev61_pst_all->cd();
-        h_ev61_pst_all->GetXaxis()->SetTitle("Peak Start Time (ns)");
-        h_ev61_pst_all->GetYaxis()->SetTitle("Counts");
-        // h_ev61_pst_on->SetMinimum(1);
-        h_ev61_pst_all->SetMaximum(10000000);
-        h_ev61_pst_all->Draw("same");
-        h_ev61_pst_all->SetLineColor(kBlue);
-        h_ev61_pst_on->Draw("same");
-        h_ev61_pst_on->SetLineColor(kRed);
-        TLegend *leg_ev61_pst = new TLegend(0.9, 0.65, 0.65, 0.45);
-        leg_ev61_pst->AddEntry(h_ev61_pst_on, "Time Adjusted", "l");
-        leg_ev61_pst->AddEntry(h_ev61_pst_all, "Not Adjusted", "l");
-        leg_ev61_pst->Draw();
-        c_ev61_pst_all->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_ev61_pst_all_%i.png", run));
-        // c_ev61_pst_all->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_ev61_pst_all.png");
-        c_ev61_pst_all->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_pst_all.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_pst_all.png"));
-        h_ev61_pst_all->Reset();
-        h_ev61_pst_on->Reset();
+    TCanvas* c_ev61_pst_all = new TCanvas("c_ev61_pst_all", "Ev61 Peak Time", 1200, 700);
+    c_ev61_pst_all->SetLogy();
+    c_ev61_pst_all->cd();
+    h_ev61_pst_all->GetXaxis()->SetTitle("Peak Start Time (ns)");
+    h_ev61_pst_all->GetYaxis()->SetTitle("Counts");
+    // h_ev61_pst_on->SetMinimum(1);
+    h_ev61_pst_all->SetMaximum(10000000);
+    h_ev61_pst_all->Draw("same");
+    h_ev61_pst_all->SetLineColor(kBlue);
+    h_ev61_pst_on->Draw("same");
+    h_ev61_pst_on->SetLineColor(kRed);
+    TLegend *leg_ev61_pst = new TLegend(0.9, 0.65, 0.65, 0.45);
+    leg_ev61_pst->AddEntry(h_ev61_pst_on, "Time Adjusted", "l");
+    leg_ev61_pst->AddEntry(h_ev61_pst_all, "Not Adjusted", "l");
+    leg_ev61_pst->Draw();
+    c_ev61_pst_all->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61_pst_all_%i.png", run));
+    // c_ev61_pst_all->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61_pst_all.png");
+    c_ev61_pst_all->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_pst_all.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_pst_all.png"));
+    h_ev61_pst_all->Reset();
+    h_ev61_pst_on->Reset();
 
-        TCanvas* c_ev61_pst_adj_vs_not = new TCanvas("c_ev61_pst_adj_vs_not", "Peak Time vs Amp Ratio", 1200, 700);
-        // c_ev61_pst_adj_vs_not->SetLogx();
-        // c_ev61_pst_adj_vs_not->SetLogy();
-        c_ev61_pst_adj_vs_not->cd();
-        h_ev61_pst_adj_vs_not->GetXaxis()->SetTitle("Adjusted Peak Start Time (ns)");
-        h_ev61_pst_adj_vs_not->GetYaxis()->SetTitle("Not Adjusted Peak Start Time (ns)");
-        h_ev61_pst_adj_vs_not->SetMarkerStyle(7);
-        h_ev61_pst_adj_vs_not->Draw();
-        c_ev61_pst_adj_vs_not->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_ev61_pst_adj_vs_not_%i.png", run));
-        // c_ev61_pst_adj_vs_not->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_ev61_pst_adj_vs_not.png");
-        c_ev61_pst_adj_vs_not->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_pst_adj_vs_not.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_pst_adj_vs_not.png"));
-        h_ev61_pst_adj_vs_not->Reset();
+    TCanvas* c_ev61_pst_adj_vs_not = new TCanvas("c_ev61_pst_adj_vs_not", "Peak Time vs Amp Ratio", 1200, 700);
+    // c_ev61_pst_adj_vs_not->SetLogx();
+    // c_ev61_pst_adj_vs_not->SetLogy();
+    c_ev61_pst_adj_vs_not->cd();
+    h_ev61_pst_adj_vs_not->GetXaxis()->SetTitle("Adjusted Peak Start Time (ns)");
+    h_ev61_pst_adj_vs_not->GetYaxis()->SetTitle("Not Adjusted Peak Start Time (ns)");
+    h_ev61_pst_adj_vs_not->SetMarkerStyle(7);
+    h_ev61_pst_adj_vs_not->Draw();
+    c_ev61_pst_adj_vs_not->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61_pst_adj_vs_not_%i.png", run));
+    // c_ev61_pst_adj_vs_not->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61_pst_adj_vs_not.png");
+    c_ev61_pst_adj_vs_not->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_pst_adj_vs_not.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_pst_adj_vs_not.png"));
+    h_ev61_pst_adj_vs_not->Reset();
 
-        TCanvas* c_peak_time_vs_amp_ratio_EV61 = new TCanvas("c_peak_time_vs_amp_ratio_EV61", "Peak Time vs Amp Ratio", 1200, 700);
-        // c_peak_time_vs_amp_ratio_EV61->SetLogy();
-        c_peak_time_vs_amp_ratio_EV61->cd();
-        h_peak_time_vs_amp_ratio_EV61->GetXaxis()->SetTitle("Peak Start Time (ns)");
-        h_peak_time_vs_amp_ratio_EV61->GetYaxis()->SetTitle("Amplitude (ADC)");
-        h_peak_time_vs_amp_ratio_EV61->SetMarkerStyle(7);
-        h_peak_time_vs_amp_ratio_EV61->Draw();
-        c_peak_time_vs_amp_ratio_EV61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_peak_time_vs_amp_ratio_EV61_%i.png", run));
-        // c_peak_time_vs_amp_ratio_EV61->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_peak_time_vs_amp_ratio_EV61.png");
-        c_peak_time_vs_amp_ratio_EV61->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_time_vs_amp_ratio_EV61.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_EV61.png"));
-        h_peak_time_vs_amp_ratio_EV61->Reset();
+    TCanvas* c_peak_time_vs_amp_ratio_EV61 = new TCanvas("c_peak_time_vs_amp_ratio_EV61", "Peak Time vs Amp Ratio", 1200, 700);
+    // c_peak_time_vs_amp_ratio_EV61->SetLogy();
+    c_peak_time_vs_amp_ratio_EV61->cd();
+    h_peak_time_vs_amp_ratio_EV61->GetXaxis()->SetTitle("Peak Start Time (ns)");
+    h_peak_time_vs_amp_ratio_EV61->GetYaxis()->SetTitle("Amplitude (ADC)");
+    h_peak_time_vs_amp_ratio_EV61->SetMarkerStyle(7);
+    h_peak_time_vs_amp_ratio_EV61->Draw();
+    c_peak_time_vs_amp_ratio_EV61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_EV61_%i.png", run));
+    // c_peak_time_vs_amp_ratio_EV61->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_EV61.png");
+    c_peak_time_vs_amp_ratio_EV61->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_time_vs_amp_ratio_EV61.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_EV61.png"));
+    h_peak_time_vs_amp_ratio_EV61->Reset();
 
-        TCanvas* c_peak_time_vs_amp_ratio_PMT = new TCanvas("c_peak_time_vs_amp_ratio_PMT", "Peak Time vs Amp Ratio", 1200, 700);
-        c_peak_time_vs_amp_ratio_PMT->SetLogy();
-        c_peak_time_vs_amp_ratio_PMT->cd();
-        h_peak_time_vs_amp_ratio_PMT->GetXaxis()->SetTitle("Peak Start Time (ns)");
-        h_peak_time_vs_amp_ratio_PMT->GetYaxis()->SetTitle("Amplitude (ADC)");
-        h_peak_time_vs_amp_ratio_PMT->SetMarkerStyle(7);
-        h_peak_time_vs_amp_ratio_PMT->Draw();
-        c_peak_time_vs_amp_ratio_PMT->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_peak_time_vs_amp_ratio_PMT_%i.png", run));
-        // c_peak_time_vs_amp_ratio_PMT->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_peak_time_vs_amp_ratio_PMT.png");
-        c_peak_time_vs_amp_ratio_PMT->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_time_vs_amp_ratio_PMT.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_PMT.png"));
-        h_peak_time_vs_amp_ratio_PMT->Reset();
+    TCanvas* c_peak_time_vs_amp_ratio_PMT = new TCanvas("c_peak_time_vs_amp_ratio_PMT", "Peak Time vs Amp Ratio", 1200, 700);
+    c_peak_time_vs_amp_ratio_PMT->SetLogy();
+    c_peak_time_vs_amp_ratio_PMT->cd();
+    h_peak_time_vs_amp_ratio_PMT->GetXaxis()->SetTitle("Peak Start Time (ns)");
+    h_peak_time_vs_amp_ratio_PMT->GetYaxis()->SetTitle("Amplitude (ADC)");
+    h_peak_time_vs_amp_ratio_PMT->SetMarkerStyle(7);
+    h_peak_time_vs_amp_ratio_PMT->Draw();
+    c_peak_time_vs_amp_ratio_PMT->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_PMT_%i.png", run));
+    // c_peak_time_vs_amp_ratio_PMT->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_PMT.png");
+    c_peak_time_vs_amp_ratio_PMT->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_time_vs_amp_ratio_PMT.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_PMT.png"));
+    h_peak_time_vs_amp_ratio_PMT->Reset();
 
-        TCanvas* c_peak_time_vs_amp_ratio_VP = new TCanvas("c_peak_time_vs_amp_ratio_VP", "Peak Time vs Amp Ratio", 1200, 700);
-        c_peak_time_vs_amp_ratio_VP->SetLogy();
-        c_peak_time_vs_amp_ratio_VP->cd();
-        h_peak_time_vs_amp_ratio_VP->GetXaxis()->SetTitle("Peak Start Time (ns)");
-        h_peak_time_vs_amp_ratio_VP->GetYaxis()->SetTitle("Amplitude (ADC)");
-        h_peak_time_vs_amp_ratio_VP->SetMarkerStyle(7);
-        h_peak_time_vs_amp_ratio_VP->Draw();
-        c_peak_time_vs_amp_ratio_VP->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_peak_time_vs_amp_ratio_VP_%i.png", run));
-        // c_peak_time_vs_amp_ratio_VP->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_peak_time_vs_amp_ratio_VP.png");
-        c_peak_time_vs_amp_ratio_VP->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_time_vs_amp_ratio_VP.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_VP.png"));
-        h_peak_time_vs_amp_ratio_VP->Reset();
+    TCanvas* c_peak_time_vs_amp_ratio_VP = new TCanvas("c_peak_time_vs_amp_ratio_VP", "Peak Time vs Amp Ratio", 1200, 700);
+    c_peak_time_vs_amp_ratio_VP->SetLogy();
+    c_peak_time_vs_amp_ratio_VP->cd();
+    h_peak_time_vs_amp_ratio_VP->GetXaxis()->SetTitle("Peak Start Time (ns)");
+    h_peak_time_vs_amp_ratio_VP->GetYaxis()->SetTitle("Amplitude (ADC)");
+    h_peak_time_vs_amp_ratio_VP->SetMarkerStyle(7);
+    h_peak_time_vs_amp_ratio_VP->Draw();
+    c_peak_time_vs_amp_ratio_VP->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_VP_%i.png", run));
+    // c_peak_time_vs_amp_ratio_VP->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_VP.png");
+    c_peak_time_vs_amp_ratio_VP->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_peak_time_vs_amp_ratio_VP.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_peak_time_vs_amp_ratio_VP.png"));
+    h_peak_time_vs_amp_ratio_VP->Reset();
 
-        TCanvas* c_top_vp_peak_time = new TCanvas("c_top_vp_peak_time", "Top Veto Panel Peak Time", 1200, 700);
-        c_top_vp_peak_time->SetLogy();
-        c_top_vp_peak_time->cd();
-        h_top_vp_peak_time->GetXaxis()->SetTitle("Peak Start Time (ns)");
-        h_top_vp_peak_time->GetYaxis()->SetTitle("Counts");
-        h_top_vp_peak_time->SetMarkerStyle(7);
-        h_top_vp_peak_time->Draw();
-        c_top_vp_peak_time->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_top_vp_peak_time_%i.png", run));
-        // c_top_vp_peak_time->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_top_vp_peak_time.png");
-        c_top_vp_peak_time->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_top_vp_peak_time.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_top_vp_peak_time.png"));
-        h_top_vp_peak_time->Reset();
+    TCanvas* c_top_vp_peak_time = new TCanvas("c_top_vp_peak_time", "Top Veto Panel Peak Time", 1200, 700);
+    c_top_vp_peak_time->SetLogy();
+    c_top_vp_peak_time->cd();
+    h_top_vp_peak_time->GetXaxis()->SetTitle("Peak Start Time (ns)");
+    h_top_vp_peak_time->GetYaxis()->SetTitle("Counts");
+    h_top_vp_peak_time->SetMarkerStyle(7);
+    h_top_vp_peak_time->Draw();
+    c_top_vp_peak_time->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_top_vp_peak_time_%i.png", run));
+    // c_top_vp_peak_time->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_top_vp_peak_time.png");
+    c_top_vp_peak_time->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_top_vp_peak_time.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_top_vp_peak_time.png"));
+    h_top_vp_peak_time->Reset();
 
-        TCanvas* c_int_ev61 = new TCanvas("c_int_ev61", "Ev61 Integral", 1200, 700);
-        // c_int_ev61->SetLogy();
-        c_int_ev61->cd();
-        h_int_ev61->GetXaxis()->SetTitle("Integral (ADC)");
-        h_int_ev61->GetYaxis()->SetTitle("Amplitude (ADC)");
-        h_int_ev61->Draw();
-        c_int_ev61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_int_ev61_%i.png", run));
-        // c_int_ev61->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_int_ev61.png");
-        c_int_ev61->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_int_ev61.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_int_ev61.png"));
-        h_int_ev61->Reset();
+    TCanvas* c_int_ev61 = new TCanvas("c_int_ev61", "Ev61 Integral", 1200, 700);
+    // c_int_ev61->SetLogy();
+    c_int_ev61->cd();
+    h_int_ev61->GetXaxis()->SetTitle("Integral (ADC)");
+    h_int_ev61->GetYaxis()->SetTitle("Amplitude (ADC)");
+    h_int_ev61->Draw();
+    c_int_ev61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_int_ev61_%i.png", run));
+    // c_int_ev61->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_int_ev61.png");
+    c_int_ev61->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_int_ev61.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_int_ev61.png"));
+    h_int_ev61->Reset();
 
-        TCanvas* c_intev61 = new TCanvas("c_intev61", "Event 61 Integral Values", 1200, 700);
-        c_intev61->SetLogy();
-        c_intev61->cd();
-        h_intev61->GetXaxis()->SetTitle("Integral (ADC)");
-        h_intev61->GetYaxis()->SetTitle("Counts");
-        h_intev61->Draw();
-        c_intev61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intev61_%i.png", run));
-        c_intev61->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intev61.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intev61.png"));
-        h_intev61->Reset();
-        /*
-        TCanvas* c_weird_events_tB = new TCanvas("c_weird_events_tB", "Disappearing Events triggerBits", 1200, 700);
-        c_weird_events_tB->SetLogy();
-        c_weird_events_tB->cd();
-        h_weird_events_tB->GetXaxis()->SetTitle("triggerBits Value");
-        h_weird_events_tB->GetYaxis()->SetTitle("Counts");
-        h_weird_events_tB->Draw();
-        c_weird_events_tB->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_weird_events_tB_%i.png", run));
-        // c_weird_events_tB->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_weird_events_tB.png");
-        c_weird_events_tB->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_weird_events_tB.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_weird_events_tB.png"));
-        h_weird_events_tB->Reset();
-        */
-    }
+    TCanvas* c_intev61 = new TCanvas("c_intev61", "Event 61 Integral Values", 1200, 700);
+    c_intev61->SetLogy();
+    c_intev61->cd();
+    h_intev61->GetXaxis()->SetTitle("Integral (ADC)");
+    h_intev61->GetYaxis()->SetTitle("Counts");
+    h_intev61->Draw();
+    c_intev61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intev61_%i.png", run));
+    c_intev61->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intev61.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intev61.png"));
+    h_intev61->Reset();
+    /*
+    TCanvas* c_weird_events_tB = new TCanvas("c_weird_events_tB", "Disappearing Events triggerBits", 1200, 700);
+    c_weird_events_tB->SetLogy();
+    c_weird_events_tB->cd();
+    h_weird_events_tB->GetXaxis()->SetTitle("triggerBits Value");
+    h_weird_events_tB->GetYaxis()->SetTitle("Counts");
+    h_weird_events_tB->Draw();
+    c_weird_events_tB->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_weird_events_tB_%i.png", run));
+    // c_weird_events_tB->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_weird_events_tB.png");
+    c_weird_events_tB->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_weird_events_tB.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_weird_events_tB.png"));
+    h_weird_events_tB->Reset();
+    */
 
     cout << "\n" << "End of code." << "\n" << endl;
 
