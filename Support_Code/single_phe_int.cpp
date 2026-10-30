@@ -78,6 +78,8 @@ int main(int argc, char *argv[])
     int ADCSIZE = 45;
     TH1D *h_wf = new TH1D("h_wf", "Waveform", ADCSIZE, 0, ADCSIZE);
 
+    int run_iterable = 0;
+
     int run_counter = 0;
 
     int hour12_run = 0;
@@ -135,12 +137,19 @@ int main(int argc, char *argv[])
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/sum2024goldenrunlist/sum2024goldenrunlist_%i.txt", run));
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/2024allgoldenruns/2024allgoldenruns_%i.txt", run));
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/weekly2024goldenruns/weekly2024goldenruns_%i.txt", run));
-    ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/allweeklyruns/allweeklyruns_%i.txt", run));            // runs 7580-13136 = 7/21/23-3/10/24 = files 2-31  // runs 14072-14976 = 4/24/24-5/31/24 = 1713954001-1717208401 = files 36-41
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/allweeklyruns/allweeklyruns_%i.txt", run));            // runs 7580-13136 = 7/21/23-3/10/24 = files 2-31  // runs 14072-14976 = 4/24/24-5/31/24 = 1713954001-1717208401 = files 36-41
     // ifstream ReadRunListFile("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/2024allgoldenruns.txt");
+    ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Runs_4084GR/F25-S26_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Weekly_4084GR/F25-S26_GR_Weekly_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Runs_6235GR/S25-S26_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Weekly_6149GR/S25-S26_GR_Weekly_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25F25S26_GR_3_rand_days_%i.txt", run));
 
     // Use a while loop together with the getline() function to read the file line by linecd
 
     int iLine = 0;
+
+    int RunListLines = 0;
 
     while (getline(ReadRunListFile, intval)) {
 
@@ -148,9 +157,9 @@ int main(int argc, char *argv[])
 
         runlist.push_back(stod(intval));
 
-        iLine += 1;
+        RunListLines += 1;
 
-        if (iLine == 24) {break;}
+        // if (RunListLines == 24) {break;}
         
     }
     
@@ -163,7 +172,8 @@ int main(int argc, char *argv[])
     // Create and open a text file
     // ofstream SPIFile("sphe_int_aggregated_runs_test.txt");
     // ofstream SPIFile("sphe_int_incomplete.txt");
-    ofstream SPIFile("sphe_int_day_avg.txt");
+    // ofstream SPIFile("sphe_int_day_avg.txt");
+    ofstream SPIFile(Form("sphe_int_F25-S26_GR_day_avg_%i.txt", run));
     // ofstream TPFile(Form("top_pop_runs_%i.txt", run));
     // ofstream BPFile(Form("bot_pop_runs_%i.txt", run));
     // ofstream MPFile(Form("may_pop_runs_%i.txt", run));
@@ -172,9 +182,9 @@ int main(int argc, char *argv[])
 
     for (size_t iRun = 0; iRun < runlist.size(); iRun++) {
 
-        // int run_iterable = iRun;
+        // run_iterable = iRun;
 
-        int run_iterable = runlist[iRun];
+        run_iterable = runlist[iRun];
 
         // int data_num = 9; int vers_num = 4;
 
@@ -379,576 +389,573 @@ int main(int argc, char *argv[])
 
         run_counter += 1;
 
-        if (run_counter == 12) {hour12_st = run_starttime; hour12_run = run_iterable;}
-
-        else if (run_counter == 24) {
-
-            /* Fill & plot histograms */
-
-            // std::vector<double> *integralToPE = new std::vector<double>();
-
-            TCanvas* c_sphe0 = new TCanvas("c_sphe0", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe0->cd();
-
-            TF1* func0 = new TF1("func0", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par0[] = {100, 350000, 0, 20, 90000, 70, 20, 20000, 150, 20, 1000, 200, 20};
-            func0->SetParameters(Par0);
-            func0->SetParName(0, "Noise");
-            func0->SetParName(1, "ZPhe_Amplitude");
-            func0->SetParName(2, "ZPhe_PeakCenter");
-            func0->SetParName(3, "ZPhe_StandardDeviation");
-            func0->SetParName(4, "SPhe_Amplitude");
-            func0->SetParName(5, "SPhe_PeakCenter");
-            func0->SetParName(6, "SPhe_StandardDeviation");
-            func0->SetParName(7, "2Phe_Amplitude");
-            func0->SetParName(8, "2Phe_PeakCenter");
-            func0->SetParName(9, "2Phe_StandardDeviation");
-            func0->SetParName(10, "3Phe_Amplitude");
-            func0->SetParName(11, "3Phe_PeakCenter");
-            func0->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe0->Fit("func0", "R");
-
-            double_t param0 = func0->GetParameter(5);
-
-            // integralToPE.push_back(param0);
-
-            TLatex *lat_sphe0 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param0));
-            lat_sphe0->SetNDC();
-            lat_sphe0->SetTextColor(1);
-            lat_sphe0->SetTextSize(0.02);
-            lat_sphe0->Draw();
-
-            h_sphe0->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe0->GetYaxis()->SetTitle("Counts");
-            h_sphe0->Draw();
-            func0->Draw("same");
-            c_sphe0->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe0/h_sphe0_run%i.png", hour12_run));
-            c_sphe0->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe0.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe0.png"));
-            h_sphe0->Reset();
-
-            TCanvas* c_sphe1 = new TCanvas("c_sphe1", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe1->cd();
-
-            TF1* func1 = new TF1("func1", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par1[] = {100, 300000, 0, 20, 80000, 100, 30, 20000, 180, 40, 1000, 300, 50};
-            func1->SetParameters(Par1);
-            func1->SetParName(0, "Noise");
-            func1->SetParName(1, "ZPhe_Amplitude");
-            func1->SetParName(2, "ZPhe_PeakCenter");
-            func1->SetParName(3, "ZPhe_StandardDeviation");
-            func1->SetParName(4, "SPhe_Amplitude");
-            func1->SetParName(5, "SPhe_PeakCenter");
-            func1->SetParName(6, "SPhe_StandardDeviation");
-            func1->SetParName(7, "2Phe_Amplitude");
-            func1->SetParName(8, "2Phe_PeakCenter");
-            func1->SetParName(9, "2Phe_StandardDeviation");
-            func1->SetParName(10, "3Phe_Amplitude");
-            func1->SetParName(11, "3Phe_PeakCenter");
-            func1->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe1->Fit("func1", "R");
-
-            double_t param1 = func1->GetParameter(5);
-
-            // integralToPE.push_back(param1);
-
-            TLatex *lat_sphe1 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param1));
-            lat_sphe1->SetNDC();
-            lat_sphe1->SetTextColor(1);
-            lat_sphe1->SetTextSize(0.02);
-            lat_sphe1->Draw();
-
-            h_sphe1->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe1->GetYaxis()->SetTitle("Counts");
-            h_sphe1->Draw();
-            func1->Draw("same");
-            c_sphe1->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe1/h_sphe1_run%i.png", hour12_run));
-            c_sphe1->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe1.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe1.png"));
-            h_sphe1->Reset();
-
-            TCanvas* c_sphe2 = new TCanvas("c_sphe2", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe2->cd();
-
-            TF1* func2 = new TF1("func2", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par2[] = {100, 300000, 0, 20, 90000, 100, 30, 20000, 160, 40, 1000, 250, 50};
-            func2->SetParameters(Par2);
-            func2->SetParName(0, "Noise");
-            func2->SetParName(1, "ZPhe_Amplitude");
-            func2->SetParName(2, "ZPhe_PeakCenter");
-            func2->SetParName(3, "ZPhe_StandardDeviation");
-            func2->SetParName(4, "SPhe_Amplitude");
-            func2->SetParName(5, "SPhe_PeakCenter");
-            func2->SetParName(6, "SPhe_StandardDeviation");
-            func2->SetParName(7, "2Phe_Amplitude");
-            func2->SetParName(8, "2Phe_PeakCenter");
-            func2->SetParName(9, "2Phe_StandardDeviation");
-            func2->SetParName(10, "3Phe_Amplitude");
-            func2->SetParName(11, "3Phe_PeakCenter");
-            func2->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe2->Fit("func2", "R");
-
-            double_t param2 = func2->GetParameter(5);
-            /*
-            if (run_starttime <= 1710102002) {           // runs 7580-13136 = 7/21/23-3/10/24 = files 2-31   // runs 14072-14976 = 4/24/24-5/31/24 = 1713954001-1717208401 = files 36-41
-
-                if (param2 >= 98) {TPFile << run_iterable << "\n";}
-
-                else if (param2 <= 97) {BPFile << run_iterable << "\n";}
-
-                flush(TPFile);
-
-                flush(BPFile);
-            
-            }
-
-            else if (run_starttime >= 1713954001 && run_starttime <= 1717208401) {
-
-                if (param2 >= 96.5 && param2 <= 97.5) {MPFile << run_iterable << "\n";}
-
-                flush(MPFile);
-
-            }
-            */
-            // integralToPE.push_back(param2);
-
-            TLatex *lat_sphe2 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param2));
-            lat_sphe2->SetNDC();
-            lat_sphe2->SetTextColor(1);
-            lat_sphe2->SetTextSize(0.02);
-            lat_sphe2->Draw();
-
-            h_sphe2->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe2->GetYaxis()->SetTitle("Counts");
-            h_sphe2->Draw();
-            func2->Draw("same");
-            c_sphe2->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe2/h_sphe2_run%i.png", hour12_run));
-            c_sphe2->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe2.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe2.png"));
-            h_sphe2->Reset();
-
-            TCanvas* c_sphe3 = new TCanvas("c_sphe3", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe3->cd();
-
-            TF1* func3 = new TF1("func3", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par3[] = {100, 350000, 0, 20, 70000, 90, 30, 20000, 160, 40, 1000, 250, 50};
-            func3->SetParameters(Par3);
-            func3->SetParName(0, "Noise");
-            func3->SetParName(1, "ZPhe_Amplitude");
-            func3->SetParName(2, "ZPhe_PeakCenter");
-            func3->SetParName(3, "ZPhe_StandardDeviation");
-            func3->SetParName(4, "SPhe_Amplitude");
-            func3->SetParName(5, "SPhe_PeakCenter");
-            func3->SetParName(6, "SPhe_StandardDeviation");
-            func3->SetParName(7, "2Phe_Amplitude");
-            func3->SetParName(8, "2Phe_PeakCenter");
-            func3->SetParName(9, "2Phe_StandardDeviation");
-            func3->SetParName(10, "3Phe_Amplitude");
-            func3->SetParName(11, "3Phe_PeakCenter");
-            func3->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe3->Fit("func3", "R");
-
-            double_t param3 = func3->GetParameter(5);
-
-            // integralToPE.push_back(param3);
-
-            TLatex *lat_sphe3 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param3));
-            lat_sphe3->SetNDC();
-            lat_sphe3->SetTextColor(1);
-            lat_sphe3->SetTextSize(0.02);
-            lat_sphe3->Draw();
-
-            h_sphe3->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe3->GetYaxis()->SetTitle("Counts");
-            h_sphe3->Draw();
-            func3->Draw("same");
-            c_sphe3->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe3/h_sphe3_run%i.png", hour12_run));
-            c_sphe3->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe3.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe3.png"));
-            h_sphe3->Reset();
-
-            TCanvas* c_sphe4 = new TCanvas("c_sphe4", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe4->cd();
-
-            TF1* func4 = new TF1("func4", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par4[] = {100, 300000, 0, 20, 60000, 130, 50, 20000, 230, 50, 1000, 350, 50};
-            func4->SetParameters(Par4);
-            func4->SetParName(0, "Noise");
-            func4->SetParName(1, "ZPhe_Amplitude");
-            func4->SetParName(2, "ZPhe_PeakCenter");
-            func4->SetParName(3, "ZPhe_StandardDeviation");
-            func4->SetParName(4, "SPhe_Amplitude");
-            func4->SetParName(5, "SPhe_PeakCenter");
-            func4->SetParName(6, "SPhe_StandardDeviation");
-            func4->SetParName(7, "2Phe_Amplitude");
-            func4->SetParName(8, "2Phe_PeakCenter");
-            func4->SetParName(9, "2Phe_StandardDeviation");
-            func4->SetParName(10, "3Phe_Amplitude");
-            func4->SetParName(11, "3Phe_PeakCenter");
-            func4->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe4->Fit("func4", "R");
-
-            double_t param4 = func4->GetParameter(5);
-
-            // integralToPE.push_back(param4);
-
-            TLatex *lat_sphe4 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param4));
-            lat_sphe4->SetNDC();
-            lat_sphe4->SetTextColor(1);
-            lat_sphe4->SetTextSize(0.02);
-            lat_sphe4->Draw();
-
-            h_sphe4->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe4->GetYaxis()->SetTitle("Counts");
-            h_sphe4->Draw();
-            func4->Draw("same");
-            c_sphe4->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe4/h_sphe4_run%i.png", hour12_run));
-            c_sphe4->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe4.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe4.png"));
-            h_sphe4->Reset();
-
-            TCanvas* c_sphe5 = new TCanvas("c_sphe5", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe5->cd();
-
-            TF1* func5 = new TF1("func5", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par5[] = {100, 350000, 0, 20, 80000, 100, 30, 20000, 160, 40, 1000, 250, 50};
-            func5->SetParameters(Par5);
-            func5->SetParName(0, "Noise");
-            func5->SetParName(1, "ZPhe_Amplitude");
-            func5->SetParName(2, "ZPhe_PeakCenter");
-            func5->SetParName(3, "ZPhe_StandardDeviation");
-            func5->SetParName(4, "SPhe_Amplitude");
-            func5->SetParName(5, "SPhe_PeakCenter");
-            func5->SetParName(6, "SPhe_StandardDeviation");
-            func5->SetParName(7, "2Phe_Amplitude");
-            func5->SetParName(8, "2Phe_PeakCenter");
-            func5->SetParName(9, "2Phe_StandardDeviation");
-            func5->SetParName(10, "3Phe_Amplitude");
-            func5->SetParName(11, "3Phe_PeakCenter");
-            func5->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe5->Fit("func5", "R");
-
-            double_t param5 = func5->GetParameter(5);
-
-            // integralToPE.push_back(param5);
-
-            TLatex *lat_sphe5 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param5));
-            lat_sphe5->SetNDC();
-            lat_sphe5->SetTextColor(1);
-            lat_sphe5->SetTextSize(0.02);
-            lat_sphe5->Draw();
-
-            h_sphe5->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe5->GetYaxis()->SetTitle("Counts");
-            h_sphe5->Draw();
-            func5->Draw("same");
-            c_sphe5->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe5/h_sphe5_run%i.png", hour12_run));
-            c_sphe5->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe5.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe5.png"));
-            h_sphe5->Reset();
-
-            TCanvas* c_sphe6 = new TCanvas("c_sphe6", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe6->cd();
-
-            TF1* func6 = new TF1("func6", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par6[] = {100, 300000, 0, 20, 90000, 110, 30, 20000, 230, 40, 1000, 300, 50};
-            func6->SetParameters(Par6);
-            func6->SetParName(0, "Noise");
-            func6->SetParName(1, "ZPhe_Amplitude");
-            func6->SetParName(2, "ZPhe_PeakCenter");
-            func6->SetParName(3, "ZPhe_StandardDeviation");
-            func6->SetParName(4, "SPhe_Amplitude");
-            func6->SetParName(5, "SPhe_PeakCenter");
-            func6->SetParName(6, "SPhe_StandardDeviation");
-            func6->SetParName(7, "2Phe_Amplitude");
-            func6->SetParName(8, "2Phe_PeakCenter");
-            func6->SetParName(9, "2Phe_StandardDeviation");
-            func6->SetParName(10, "3Phe_Amplitude");
-            func6->SetParName(11, "3Phe_PeakCenter");
-            func6->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe6->Fit("func6", "R");
-
-            double_t param6 = func6->GetParameter(5);
-
-            // integralToPE.push_back(param6);
-
-            TLatex *lat_sphe6 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param6));
-            lat_sphe6->SetNDC();
-            lat_sphe6->SetTextColor(1);
-            lat_sphe6->SetTextSize(0.02);
-            lat_sphe6->Draw();
-
-            h_sphe6->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe6->GetYaxis()->SetTitle("Counts");
-            h_sphe6->Draw();
-            func6->Draw("same");
-            c_sphe6->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe6/h_sphe6_run%i.png", hour12_run));
-            c_sphe6->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe6.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe6.png"));
-            h_sphe6->Reset();
-
-            TCanvas* c_sphe7 = new TCanvas("c_sphe7", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe7->cd();
-
-            TF1* func7 = new TF1("func7", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par7[] = {100, 300000, 0, 20, 80000, 110, 30, 20000, 200, 40, 1000, 300, 50};
-            func7->SetParameters(Par7);
-            func7->SetParName(0, "Noise");
-            func7->SetParName(1, "ZPhe_Amplitude");
-            func7->SetParName(2, "ZPhe_PeakCenter");
-            func7->SetParName(3, "ZPhe_StandardDeviation");
-            func7->SetParName(4, "SPhe_Amplitude");
-            func7->SetParName(5, "SPhe_PeakCenter");
-            func7->SetParName(6, "SPhe_StandardDeviation");
-            func7->SetParName(7, "2Phe_Amplitude");
-            func7->SetParName(8, "2Phe_PeakCenter");
-            func7->SetParName(9, "2Phe_StandardDeviation");
-            func7->SetParName(10, "3Phe_Amplitude");
-            func7->SetParName(11, "3Phe_PeakCenter");
-            func7->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe7->Fit("func7", "R");
-
-            double_t param7 = func7->GetParameter(5);
-
-            // integralToPE.push_back(param7);
-
-            TLatex *lat_sphe7 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param7));
-            lat_sphe7->SetNDC();
-            lat_sphe7->SetTextColor(1);
-            lat_sphe7->SetTextSize(0.02);
-            lat_sphe7->Draw();
-
-            h_sphe7->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe7->GetYaxis()->SetTitle("Counts");
-            h_sphe7->Draw();
-            func7->Draw("same");
-            c_sphe7->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe7/h_sphe7_run%i.png", hour12_run));
-            c_sphe7->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe7.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe7.png"));
-            h_sphe7->Reset();
-
-            TCanvas* c_sphe8 = new TCanvas("c_sphe8", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe8->cd();
-
-            TF1* func8 = new TF1("func8", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par8[] = {100, 300000, 0, 20, 70000, 100, 30, 20000, 200, 40, 1000, 300, 50};
-            func8->SetParameters(Par8);
-            func8->SetParName(0, "Noise");
-            func8->SetParName(1, "ZPhe_Amplitude");
-            func8->SetParName(2, "ZPhe_PeakCenter");
-            func8->SetParName(3, "ZPhe_StandardDeviation");
-            func8->SetParName(4, "SPhe_Amplitude");
-            func8->SetParName(5, "SPhe_PeakCenter");
-            func8->SetParName(6, "SPhe_StandardDeviation");
-            func8->SetParName(7, "2Phe_Amplitude");
-            func8->SetParName(8, "2Phe_PeakCenter");
-            func8->SetParName(9, "2Phe_StandardDeviation");
-            func8->SetParName(10, "3Phe_Amplitude");
-            func8->SetParName(11, "3Phe_PeakCenter");
-            func8->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe8->Fit("func8", "R");
-
-            double_t param8 = func8->GetParameter(5);
-
-            // integralToPE.push_back(param8);
-
-            TLatex *lat_sphe8 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param8));
-            lat_sphe8->SetNDC();
-            lat_sphe8->SetTextColor(1);
-            lat_sphe8->SetTextSize(0.02);
-            lat_sphe8->Draw();
-
-            h_sphe8->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe8->GetYaxis()->SetTitle("Counts");
-            h_sphe8->Draw();
-            func8->Draw("same");
-            c_sphe8->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe8/h_sphe8_run%i.png", hour12_run));
-            c_sphe8->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe8.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe8.png"));
-            h_sphe8->Reset();
-
-            TCanvas* c_sphe9 = new TCanvas("c_sphe9", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe9->cd();
-
-            TF1* func9 = new TF1("func9", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par9[] = {100, 400000, 0, 20, 40000, 120, 50, 4000, 200, 50, 400, 300, 50};
-            func9->SetParameters(Par9);
-            func9->SetParName(0, "Noise");
-            func9->SetParName(1, "ZPhe_Amplitude");
-            func9->SetParName(2, "ZPhe_PeakCenter");
-            func9->SetParName(3, "ZPhe_StandardDeviation");
-            func9->SetParName(4, "SPhe_Amplitude");
-            func9->SetParName(5, "SPhe_PeakCenter");
-            func9->SetParName(6, "SPhe_StandardDeviation");
-            func9->SetParName(7, "2Phe_Amplitude");
-            func9->SetParName(8, "2Phe_PeakCenter");
-            func9->SetParName(9, "2Phe_StandardDeviation");
-            func9->SetParName(10, "3Phe_Amplitude");
-            func9->SetParName(11, "3Phe_PeakCenter");
-            func9->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe9->Fit("func9", "R");
-
-            double_t param9 = func9->GetParameter(5);
-
-            // integralToPE.push_back(param9);
-
-            TLatex *lat_sphe9 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param9));
-            lat_sphe9->SetNDC();
-            lat_sphe9->SetTextColor(1);
-            lat_sphe9->SetTextSize(0.02);
-            lat_sphe9->Draw();
-
-            h_sphe9->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe9->GetYaxis()->SetTitle("Counts");
-            h_sphe9->Draw();
-            func9->Draw("same");
-            c_sphe9->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe9/h_sphe9_run%i.png", hour12_run));
-            c_sphe9->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe9.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe9.png"));
-            h_sphe9->Reset();
-
-            TCanvas* c_sphe10 = new TCanvas("c_sphe10", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe10->cd();
-
-            TF1* func10 = new TF1("func10", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par10[] = {100, 300000, 0, 20, 70000, 120, 40, 20000, 200, 50, 1000, 300, 50};
-            func10->SetParameters(Par10);
-            func10->SetParName(0, "Noise");
-            func10->SetParName(1, "ZPhe_Amplitude");
-            func10->SetParName(2, "ZPhe_PeakCenter");
-            func10->SetParName(3, "ZPhe_StandardDeviation");
-            func10->SetParName(4, "SPhe_Amplitude");
-            func10->SetParName(5, "SPhe_PeakCenter");
-            func10->SetParName(6, "SPhe_StandardDeviation");
-            func10->SetParName(7, "2Phe_Amplitude");
-            func10->SetParName(8, "2Phe_PeakCenter");
-            func10->SetParName(9, "2Phe_StandardDeviation");
-            func10->SetParName(10, "3Phe_Amplitude");
-            func10->SetParName(11, "3Phe_PeakCenter");
-            func10->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe10->Fit("func10", "R");
-
-            double_t param10 = func10->GetParameter(5);
-
-            // integralToPE.push_back(param10);
-
-            TLatex *lat_sphe10 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param10));
-            lat_sphe10->SetNDC();
-            lat_sphe10->SetTextColor(1);
-            lat_sphe10->SetTextSize(0.02);
-            lat_sphe10->Draw();
-
-            h_sphe10->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe10->GetYaxis()->SetTitle("Counts");
-            h_sphe10->Draw();
-            func10->Draw("same");
-            c_sphe10->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe10/h_sphe10_run%i.png", hour12_run));
-            c_sphe10->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe10.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe10.png"));
-            h_sphe10->Reset();
-
-            TCanvas* c_sphe11 = new TCanvas("c_sphe11", "Single Photoelectron Integral Conversion", 900, 700);
-            c_sphe11->cd();
-
-            TF1* func11 = new TF1("func11", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
-            double Par11[] = {100, 300000, 0, 20, 60000, 110, 40, 20000, 200, 50, 1000, 300, 50};
-            func11->SetParameters(Par11);
-            func11->SetParName(0, "Noise");
-            func11->SetParName(1, "ZPhe_Amplitude");
-            func11->SetParName(2, "ZPhe_PeakCenter");
-            func11->SetParName(3, "ZPhe_StandardDeviation");
-            func11->SetParName(4, "SPhe_Amplitude");
-            func11->SetParName(5, "SPhe_PeakCenter");
-            func11->SetParName(6, "SPhe_StandardDeviation");
-            func11->SetParName(7, "2Phe_Amplitude");
-            func11->SetParName(8, "2Phe_PeakCenter");
-            func11->SetParName(9, "2Phe_StandardDeviation");
-            func11->SetParName(10, "3Phe_Amplitude");
-            func11->SetParName(11, "3Phe_PeakCenter");
-            func11->SetParName(12, "3Phe_StandardDeviation");
-            h_sphe11->Fit("func11", "R");
-
-            double_t param11 = func11->GetParameter(5);
-
-            // integralToPE.push_back(param11);
-
-            TLatex *lat_sphe11 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param11));
-            lat_sphe11->SetNDC();
-            lat_sphe11->SetTextColor(1);
-            lat_sphe11->SetTextSize(0.02);
-            lat_sphe11->Draw();
-
-            h_sphe11->GetXaxis()->SetTitle("Integral (ADC)");
-            h_sphe11->GetYaxis()->SetTitle("Counts");
-            h_sphe11->Draw();
-            func11->Draw("same");
-            c_sphe11->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe11/h_sphe11_run%i.png", hour12_run));
-            c_sphe11->Close();
-            // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe11.png"));
-            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe11.png"));
-            h_sphe11->Reset();
-
-            std::cout << "\n" << "integralToPE, Run " << run << " = { " << param0 << "," << param1 << "," << param2 << "," << param3 << "," << param4 << "," << param5 << "," << param6 << "," << param7 << "," << param8 << "," << param9 << "," << param10 << "," << param11 << " }" << "\n";
-
-            // for (int iVec = 0; iVec < integralToPE.size(); iVec++) {integralToPE_25hrs.push_back(integralToPE[iVec]);}
-
-            // Write to the file
-            SPIFile << hour12_st << "\t";
-            
-            SPIFile << param0 << "\t";
-
-            SPIFile << param1 << "\t";
-
-            SPIFile << param2 << "\t";
-
-            SPIFile << param3 << "\t";
-
-            SPIFile << param4 << "\t";
-
-            SPIFile << param5 << "\t";
-
-            SPIFile << param6 << "\t";
-
-            SPIFile << param7 << "\t";
-
-            SPIFile << param8 << "\t";
-
-            SPIFile << param9 << "\t";
-
-            SPIFile << param10 << "\t";
-
-            SPIFile << param11 << "\n";
-
-            flush(SPIFile);
-
-            cout << "\n" << "Wrote to text file, Run " << run_iterable << endl;
-
-            // delete integralToPE;
-
-            // integralToPE.erase(integralToPE.begin(), integralToPE.end());
-
-            run_counter = 0;
-
-            // integralToPE.clear();
-
-            // integralToPE.shrink_to_fit();
-
-        }
+        if (run_counter == floor(0.5 * RunListLines)) {hour12_st = run_starttime; hour12_run = run_iterable;}
 
         f->Close();
 
     } // Run loop
+
+    /* Fill & plot histograms */
+
+    // std::vector<double> *integralToPE = new std::vector<double>();
+
+    TCanvas* c_sphe0 = new TCanvas("c_sphe0", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe0->cd();
+
+    TF1* func0 = new TF1("func0", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par0[] = {100, 350000, 0, 20, 90000, 70, 20, 20000, 150, 20, 1000, 200, 20};
+    func0->SetParameters(Par0);
+    func0->SetParName(0, "Noise");
+    func0->SetParName(1, "ZPhe_Amplitude");
+    func0->SetParName(2, "ZPhe_PeakCenter");
+    func0->SetParName(3, "ZPhe_StandardDeviation");
+    func0->SetParName(4, "SPhe_Amplitude");
+    func0->SetParName(5, "SPhe_PeakCenter");
+    func0->SetParName(6, "SPhe_StandardDeviation");
+    func0->SetParName(7, "2Phe_Amplitude");
+    func0->SetParName(8, "2Phe_PeakCenter");
+    func0->SetParName(9, "2Phe_StandardDeviation");
+    func0->SetParName(10, "3Phe_Amplitude");
+    func0->SetParName(11, "3Phe_PeakCenter");
+    func0->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe0->Fit("func0", "R");
+
+    double_t param0 = func0->GetParameter(5);
+
+    // integralToPE.push_back(param0);
+
+    TLatex *lat_sphe0 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param0));
+    lat_sphe0->SetNDC();
+    lat_sphe0->SetTextColor(1);
+    lat_sphe0->SetTextSize(0.02);
+    lat_sphe0->Draw();
+
+    h_sphe0->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe0->GetYaxis()->SetTitle("Counts");
+    h_sphe0->Draw();
+    func0->Draw("same");
+    c_sphe0->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe0/h_sphe0_run%i.png", hour12_run));
+    c_sphe0->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe0.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe0.png"));
+    h_sphe0->Reset();
+
+    TCanvas* c_sphe1 = new TCanvas("c_sphe1", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe1->cd();
+
+    TF1* func1 = new TF1("func1", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par1[] = {100, 300000, 0, 20, 80000, 100, 30, 20000, 180, 40, 1000, 300, 50};
+    func1->SetParameters(Par1);
+    func1->SetParName(0, "Noise");
+    func1->SetParName(1, "ZPhe_Amplitude");
+    func1->SetParName(2, "ZPhe_PeakCenter");
+    func1->SetParName(3, "ZPhe_StandardDeviation");
+    func1->SetParName(4, "SPhe_Amplitude");
+    func1->SetParName(5, "SPhe_PeakCenter");
+    func1->SetParName(6, "SPhe_StandardDeviation");
+    func1->SetParName(7, "2Phe_Amplitude");
+    func1->SetParName(8, "2Phe_PeakCenter");
+    func1->SetParName(9, "2Phe_StandardDeviation");
+    func1->SetParName(10, "3Phe_Amplitude");
+    func1->SetParName(11, "3Phe_PeakCenter");
+    func1->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe1->Fit("func1", "R");
+
+    double_t param1 = func1->GetParameter(5);
+
+    // integralToPE.push_back(param1);
+
+    TLatex *lat_sphe1 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param1));
+    lat_sphe1->SetNDC();
+    lat_sphe1->SetTextColor(1);
+    lat_sphe1->SetTextSize(0.02);
+    lat_sphe1->Draw();
+
+    h_sphe1->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe1->GetYaxis()->SetTitle("Counts");
+    h_sphe1->Draw();
+    func1->Draw("same");
+    c_sphe1->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe1/h_sphe1_run%i.png", hour12_run));
+    c_sphe1->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe1.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe1.png"));
+    h_sphe1->Reset();
+
+    TCanvas* c_sphe2 = new TCanvas("c_sphe2", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe2->cd();
+
+    TF1* func2 = new TF1("func2", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par2[] = {100, 300000, 0, 20, 90000, 100, 30, 20000, 160, 40, 1000, 250, 50};
+    func2->SetParameters(Par2);
+    func2->SetParName(0, "Noise");
+    func2->SetParName(1, "ZPhe_Amplitude");
+    func2->SetParName(2, "ZPhe_PeakCenter");
+    func2->SetParName(3, "ZPhe_StandardDeviation");
+    func2->SetParName(4, "SPhe_Amplitude");
+    func2->SetParName(5, "SPhe_PeakCenter");
+    func2->SetParName(6, "SPhe_StandardDeviation");
+    func2->SetParName(7, "2Phe_Amplitude");
+    func2->SetParName(8, "2Phe_PeakCenter");
+    func2->SetParName(9, "2Phe_StandardDeviation");
+    func2->SetParName(10, "3Phe_Amplitude");
+    func2->SetParName(11, "3Phe_PeakCenter");
+    func2->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe2->Fit("func2", "R");
+
+    double_t param2 = func2->GetParameter(5);
+    /*
+    if (run_starttime <= 1710102002) {           // runs 7580-13136 = 7/21/23-3/10/24 = files 2-31   // runs 14072-14976 = 4/24/24-5/31/24 = 1713954001-1717208401 = files 36-41
+
+        if (param2 >= 98) {TPFile << run_iterable << "\n";}
+
+        else if (param2 <= 97) {BPFile << run_iterable << "\n";}
+
+        flush(TPFile);
+
+        flush(BPFile);
+    
+    }
+
+    else if (run_starttime >= 1713954001 && run_starttime <= 1717208401) {
+
+        if (param2 >= 96.5 && param2 <= 97.5) {MPFile << run_iterable << "\n";}
+
+        flush(MPFile);
+
+    }
+    */
+    // integralToPE.push_back(param2);
+
+    TLatex *lat_sphe2 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param2));
+    lat_sphe2->SetNDC();
+    lat_sphe2->SetTextColor(1);
+    lat_sphe2->SetTextSize(0.02);
+    lat_sphe2->Draw();
+
+    h_sphe2->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe2->GetYaxis()->SetTitle("Counts");
+    h_sphe2->Draw();
+    func2->Draw("same");
+    c_sphe2->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe2/h_sphe2_run%i.png", hour12_run));
+    c_sphe2->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe2.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe2.png"));
+    h_sphe2->Reset();
+
+    TCanvas* c_sphe3 = new TCanvas("c_sphe3", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe3->cd();
+
+    TF1* func3 = new TF1("func3", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par3[] = {100, 350000, 0, 20, 70000, 90, 30, 20000, 160, 40, 1000, 250, 50};
+    func3->SetParameters(Par3);
+    func3->SetParName(0, "Noise");
+    func3->SetParName(1, "ZPhe_Amplitude");
+    func3->SetParName(2, "ZPhe_PeakCenter");
+    func3->SetParName(3, "ZPhe_StandardDeviation");
+    func3->SetParName(4, "SPhe_Amplitude");
+    func3->SetParName(5, "SPhe_PeakCenter");
+    func3->SetParName(6, "SPhe_StandardDeviation");
+    func3->SetParName(7, "2Phe_Amplitude");
+    func3->SetParName(8, "2Phe_PeakCenter");
+    func3->SetParName(9, "2Phe_StandardDeviation");
+    func3->SetParName(10, "3Phe_Amplitude");
+    func3->SetParName(11, "3Phe_PeakCenter");
+    func3->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe3->Fit("func3", "R");
+
+    double_t param3 = func3->GetParameter(5);
+
+    // integralToPE.push_back(param3);
+
+    TLatex *lat_sphe3 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param3));
+    lat_sphe3->SetNDC();
+    lat_sphe3->SetTextColor(1);
+    lat_sphe3->SetTextSize(0.02);
+    lat_sphe3->Draw();
+
+    h_sphe3->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe3->GetYaxis()->SetTitle("Counts");
+    h_sphe3->Draw();
+    func3->Draw("same");
+    c_sphe3->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe3/h_sphe3_run%i.png", hour12_run));
+    c_sphe3->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe3.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe3.png"));
+    h_sphe3->Reset();
+
+    TCanvas* c_sphe4 = new TCanvas("c_sphe4", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe4->cd();
+
+    TF1* func4 = new TF1("func4", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par4[] = {100, 300000, 0, 20, 60000, 130, 50, 20000, 230, 50, 1000, 350, 50};
+    func4->SetParameters(Par4);
+    func4->SetParName(0, "Noise");
+    func4->SetParName(1, "ZPhe_Amplitude");
+    func4->SetParName(2, "ZPhe_PeakCenter");
+    func4->SetParName(3, "ZPhe_StandardDeviation");
+    func4->SetParName(4, "SPhe_Amplitude");
+    func4->SetParName(5, "SPhe_PeakCenter");
+    func4->SetParName(6, "SPhe_StandardDeviation");
+    func4->SetParName(7, "2Phe_Amplitude");
+    func4->SetParName(8, "2Phe_PeakCenter");
+    func4->SetParName(9, "2Phe_StandardDeviation");
+    func4->SetParName(10, "3Phe_Amplitude");
+    func4->SetParName(11, "3Phe_PeakCenter");
+    func4->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe4->Fit("func4", "R");
+
+    double_t param4 = func4->GetParameter(5);
+
+    // integralToPE.push_back(param4);
+
+    TLatex *lat_sphe4 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param4));
+    lat_sphe4->SetNDC();
+    lat_sphe4->SetTextColor(1);
+    lat_sphe4->SetTextSize(0.02);
+    lat_sphe4->Draw();
+
+    h_sphe4->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe4->GetYaxis()->SetTitle("Counts");
+    h_sphe4->Draw();
+    func4->Draw("same");
+    c_sphe4->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe4/h_sphe4_run%i.png", hour12_run));
+    c_sphe4->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe4.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe4.png"));
+    h_sphe4->Reset();
+
+    TCanvas* c_sphe5 = new TCanvas("c_sphe5", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe5->cd();
+
+    TF1* func5 = new TF1("func5", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par5[] = {100, 350000, 0, 20, 80000, 100, 30, 20000, 160, 40, 1000, 250, 50};
+    func5->SetParameters(Par5);
+    func5->SetParName(0, "Noise");
+    func5->SetParName(1, "ZPhe_Amplitude");
+    func5->SetParName(2, "ZPhe_PeakCenter");
+    func5->SetParName(3, "ZPhe_StandardDeviation");
+    func5->SetParName(4, "SPhe_Amplitude");
+    func5->SetParName(5, "SPhe_PeakCenter");
+    func5->SetParName(6, "SPhe_StandardDeviation");
+    func5->SetParName(7, "2Phe_Amplitude");
+    func5->SetParName(8, "2Phe_PeakCenter");
+    func5->SetParName(9, "2Phe_StandardDeviation");
+    func5->SetParName(10, "3Phe_Amplitude");
+    func5->SetParName(11, "3Phe_PeakCenter");
+    func5->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe5->Fit("func5", "R");
+
+    double_t param5 = func5->GetParameter(5);
+
+    // integralToPE.push_back(param5);
+
+    TLatex *lat_sphe5 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param5));
+    lat_sphe5->SetNDC();
+    lat_sphe5->SetTextColor(1);
+    lat_sphe5->SetTextSize(0.02);
+    lat_sphe5->Draw();
+
+    h_sphe5->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe5->GetYaxis()->SetTitle("Counts");
+    h_sphe5->Draw();
+    func5->Draw("same");
+    c_sphe5->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe5/h_sphe5_run%i.png", hour12_run));
+    c_sphe5->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe5.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe5.png"));
+    h_sphe5->Reset();
+
+    TCanvas* c_sphe6 = new TCanvas("c_sphe6", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe6->cd();
+
+    TF1* func6 = new TF1("func6", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par6[] = {100, 300000, 0, 20, 90000, 110, 30, 20000, 230, 40, 1000, 300, 50};
+    func6->SetParameters(Par6);
+    func6->SetParName(0, "Noise");
+    func6->SetParName(1, "ZPhe_Amplitude");
+    func6->SetParName(2, "ZPhe_PeakCenter");
+    func6->SetParName(3, "ZPhe_StandardDeviation");
+    func6->SetParName(4, "SPhe_Amplitude");
+    func6->SetParName(5, "SPhe_PeakCenter");
+    func6->SetParName(6, "SPhe_StandardDeviation");
+    func6->SetParName(7, "2Phe_Amplitude");
+    func6->SetParName(8, "2Phe_PeakCenter");
+    func6->SetParName(9, "2Phe_StandardDeviation");
+    func6->SetParName(10, "3Phe_Amplitude");
+    func6->SetParName(11, "3Phe_PeakCenter");
+    func6->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe6->Fit("func6", "R");
+
+    double_t param6 = func6->GetParameter(5);
+
+    // integralToPE.push_back(param6);
+
+    TLatex *lat_sphe6 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param6));
+    lat_sphe6->SetNDC();
+    lat_sphe6->SetTextColor(1);
+    lat_sphe6->SetTextSize(0.02);
+    lat_sphe6->Draw();
+
+    h_sphe6->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe6->GetYaxis()->SetTitle("Counts");
+    h_sphe6->Draw();
+    func6->Draw("same");
+    c_sphe6->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe6/h_sphe6_run%i.png", hour12_run));
+    c_sphe6->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe6.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe6.png"));
+    h_sphe6->Reset();
+
+    TCanvas* c_sphe7 = new TCanvas("c_sphe7", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe7->cd();
+
+    TF1* func7 = new TF1("func7", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par7[] = {100, 300000, 0, 20, 80000, 110, 30, 20000, 200, 40, 1000, 300, 50};
+    func7->SetParameters(Par7);
+    func7->SetParName(0, "Noise");
+    func7->SetParName(1, "ZPhe_Amplitude");
+    func7->SetParName(2, "ZPhe_PeakCenter");
+    func7->SetParName(3, "ZPhe_StandardDeviation");
+    func7->SetParName(4, "SPhe_Amplitude");
+    func7->SetParName(5, "SPhe_PeakCenter");
+    func7->SetParName(6, "SPhe_StandardDeviation");
+    func7->SetParName(7, "2Phe_Amplitude");
+    func7->SetParName(8, "2Phe_PeakCenter");
+    func7->SetParName(9, "2Phe_StandardDeviation");
+    func7->SetParName(10, "3Phe_Amplitude");
+    func7->SetParName(11, "3Phe_PeakCenter");
+    func7->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe7->Fit("func7", "R");
+
+    double_t param7 = func7->GetParameter(5);
+
+    // integralToPE.push_back(param7);
+
+    TLatex *lat_sphe7 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param7));
+    lat_sphe7->SetNDC();
+    lat_sphe7->SetTextColor(1);
+    lat_sphe7->SetTextSize(0.02);
+    lat_sphe7->Draw();
+
+    h_sphe7->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe7->GetYaxis()->SetTitle("Counts");
+    h_sphe7->Draw();
+    func7->Draw("same");
+    c_sphe7->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe7/h_sphe7_run%i.png", hour12_run));
+    c_sphe7->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe7.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe7.png"));
+    h_sphe7->Reset();
+
+    TCanvas* c_sphe8 = new TCanvas("c_sphe8", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe8->cd();
+
+    TF1* func8 = new TF1("func8", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par8[] = {100, 300000, 0, 20, 70000, 100, 30, 20000, 200, 40, 1000, 300, 50};
+    func8->SetParameters(Par8);
+    func8->SetParName(0, "Noise");
+    func8->SetParName(1, "ZPhe_Amplitude");
+    func8->SetParName(2, "ZPhe_PeakCenter");
+    func8->SetParName(3, "ZPhe_StandardDeviation");
+    func8->SetParName(4, "SPhe_Amplitude");
+    func8->SetParName(5, "SPhe_PeakCenter");
+    func8->SetParName(6, "SPhe_StandardDeviation");
+    func8->SetParName(7, "2Phe_Amplitude");
+    func8->SetParName(8, "2Phe_PeakCenter");
+    func8->SetParName(9, "2Phe_StandardDeviation");
+    func8->SetParName(10, "3Phe_Amplitude");
+    func8->SetParName(11, "3Phe_PeakCenter");
+    func8->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe8->Fit("func8", "R");
+
+    double_t param8 = func8->GetParameter(5);
+
+    // integralToPE.push_back(param8);
+
+    TLatex *lat_sphe8 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param8));
+    lat_sphe8->SetNDC();
+    lat_sphe8->SetTextColor(1);
+    lat_sphe8->SetTextSize(0.02);
+    lat_sphe8->Draw();
+
+    h_sphe8->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe8->GetYaxis()->SetTitle("Counts");
+    h_sphe8->Draw();
+    func8->Draw("same");
+    c_sphe8->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe8/h_sphe8_run%i.png", hour12_run));
+    c_sphe8->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe8.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe8.png"));
+    h_sphe8->Reset();
+
+    TCanvas* c_sphe9 = new TCanvas("c_sphe9", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe9->cd();
+
+    TF1* func9 = new TF1("func9", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par9[] = {100, 400000, 0, 20, 40000, 120, 50, 4000, 200, 50, 400, 300, 50};
+    func9->SetParameters(Par9);
+    func9->SetParName(0, "Noise");
+    func9->SetParName(1, "ZPhe_Amplitude");
+    func9->SetParName(2, "ZPhe_PeakCenter");
+    func9->SetParName(3, "ZPhe_StandardDeviation");
+    func9->SetParName(4, "SPhe_Amplitude");
+    func9->SetParName(5, "SPhe_PeakCenter");
+    func9->SetParName(6, "SPhe_StandardDeviation");
+    func9->SetParName(7, "2Phe_Amplitude");
+    func9->SetParName(8, "2Phe_PeakCenter");
+    func9->SetParName(9, "2Phe_StandardDeviation");
+    func9->SetParName(10, "3Phe_Amplitude");
+    func9->SetParName(11, "3Phe_PeakCenter");
+    func9->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe9->Fit("func9", "R");
+
+    double_t param9 = func9->GetParameter(5);
+
+    // integralToPE.push_back(param9);
+
+    TLatex *lat_sphe9 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param9));
+    lat_sphe9->SetNDC();
+    lat_sphe9->SetTextColor(1);
+    lat_sphe9->SetTextSize(0.02);
+    lat_sphe9->Draw();
+
+    h_sphe9->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe9->GetYaxis()->SetTitle("Counts");
+    h_sphe9->Draw();
+    func9->Draw("same");
+    c_sphe9->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe9/h_sphe9_run%i.png", hour12_run));
+    c_sphe9->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe9.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe9.png"));
+    h_sphe9->Reset();
+
+    TCanvas* c_sphe10 = new TCanvas("c_sphe10", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe10->cd();
+
+    TF1* func10 = new TF1("func10", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par10[] = {100, 300000, 0, 20, 70000, 120, 40, 20000, 200, 50, 1000, 300, 50};
+    func10->SetParameters(Par10);
+    func10->SetParName(0, "Noise");
+    func10->SetParName(1, "ZPhe_Amplitude");
+    func10->SetParName(2, "ZPhe_PeakCenter");
+    func10->SetParName(3, "ZPhe_StandardDeviation");
+    func10->SetParName(4, "SPhe_Amplitude");
+    func10->SetParName(5, "SPhe_PeakCenter");
+    func10->SetParName(6, "SPhe_StandardDeviation");
+    func10->SetParName(7, "2Phe_Amplitude");
+    func10->SetParName(8, "2Phe_PeakCenter");
+    func10->SetParName(9, "2Phe_StandardDeviation");
+    func10->SetParName(10, "3Phe_Amplitude");
+    func10->SetParName(11, "3Phe_PeakCenter");
+    func10->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe10->Fit("func10", "R");
+
+    double_t param10 = func10->GetParameter(5);
+
+    // integralToPE.push_back(param10);
+
+    TLatex *lat_sphe10 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param10));
+    lat_sphe10->SetNDC();
+    lat_sphe10->SetTextColor(1);
+    lat_sphe10->SetTextSize(0.02);
+    lat_sphe10->Draw();
+
+    h_sphe10->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe10->GetYaxis()->SetTitle("Counts");
+    h_sphe10->Draw();
+    func10->Draw("same");
+    c_sphe10->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe10/h_sphe10_run%i.png", hour12_run));
+    c_sphe10->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe10.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe10.png"));
+    h_sphe10->Reset();
+
+    TCanvas* c_sphe11 = new TCanvas("c_sphe11", "Single Photoelectron Integral Conversion", 900, 700);
+    c_sphe11->cd();
+
+    TF1* func11 = new TF1("func11", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))+[4]*exp(-pow((x-[5]),2)/(2*pow([6],2)))+[7]*exp(-pow((x-[8]),2)/(2*pow([9],2)))+[10]*exp(-pow((x-[11]),2)/(2*pow([12],2)))", -50, 400);
+    double Par11[] = {100, 300000, 0, 20, 60000, 110, 40, 20000, 200, 50, 1000, 300, 50};
+    func11->SetParameters(Par11);
+    func11->SetParName(0, "Noise");
+    func11->SetParName(1, "ZPhe_Amplitude");
+    func11->SetParName(2, "ZPhe_PeakCenter");
+    func11->SetParName(3, "ZPhe_StandardDeviation");
+    func11->SetParName(4, "SPhe_Amplitude");
+    func11->SetParName(5, "SPhe_PeakCenter");
+    func11->SetParName(6, "SPhe_StandardDeviation");
+    func11->SetParName(7, "2Phe_Amplitude");
+    func11->SetParName(8, "2Phe_PeakCenter");
+    func11->SetParName(9, "2Phe_StandardDeviation");
+    func11->SetParName(10, "3Phe_Amplitude");
+    func11->SetParName(11, "3Phe_PeakCenter");
+    func11->SetParName(12, "3Phe_StandardDeviation");
+    h_sphe11->Fit("func11", "R");
+
+    double_t param11 = func11->GetParameter(5);
+
+    // integralToPE.push_back(param11);
+
+    TLatex *lat_sphe11 = new TLatex(0.6, 0.75, Form("Avg Sphe Int = %.2f", param11));
+    lat_sphe11->SetNDC();
+    lat_sphe11->SetTextColor(1);
+    lat_sphe11->SetTextSize(0.02);
+    lat_sphe11->Draw();
+
+    h_sphe11->GetXaxis()->SetTitle("Integral (ADC)");
+    h_sphe11->GetYaxis()->SetTitle("Counts");
+    h_sphe11->Draw();
+    func11->Draw("same");
+    c_sphe11->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe11/h_sphe11_run%i.png", hour12_run));
+    c_sphe11->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe11.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe11.png"));
+    h_sphe11->Reset();
+
+    std::cout << "\n" << "integralToPE, Run " << run << " = { " << param0 << "," << param1 << "," << param2 << "," << param3 << "," << param4 << "," << param5 << "," << param6 << "," << param7 << "," << param8 << "," << param9 << "," << param10 << "," << param11 << " }" << "\n";
+
+    // for (int iVec = 0; iVec < integralToPE.size(); iVec++) {integralToPE_25hrs.push_back(integralToPE[iVec]);}
+
+    // Write to the file
+    SPIFile << hour12_st << "\t";
+    
+    SPIFile << param0 << "\t";
+
+    SPIFile << param1 << "\t";
+
+    SPIFile << param2 << "\t";
+
+    SPIFile << param3 << "\t";
+
+    SPIFile << param4 << "\t";
+
+    SPIFile << param5 << "\t";
+
+    SPIFile << param6 << "\t";
+
+    SPIFile << param7 << "\t";
+
+    SPIFile << param8 << "\t";
+
+    SPIFile << param9 << "\t";
+
+    SPIFile << param10 << "\t";
+
+    SPIFile << param11 << "\n";
+
+    flush(SPIFile);
+
+    cout << "\n" << "Wrote to text file, Run " << run_iterable << endl;
+
+    // delete integralToPE;
+
+    // integralToPE.erase(integralToPE.begin(), integralToPE.end());
+
+    run_counter = 0;
+
+    // integralToPE.clear();
+
+    // integralToPE.shrink_to_fit();
+    
     /*
     TCanvas* c_sphe2_top = new TCanvas("c_sphe2_top", "Single Photoelectron Integral Conversion", 900, 700);
     c_sphe2_top->cd();
