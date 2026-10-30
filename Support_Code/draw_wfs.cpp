@@ -31,6 +31,7 @@
 #include "TVirtualPadEditor.h"
 #include "TColor.h"
 #include "Rtypes.h"
+#include <filesystem>
 
 using std::cout; 
 using std::endl;
@@ -52,116 +53,188 @@ int main(int argc, char *argv[])
     }   
     cout << "\n" << "Run: " << run << " Event: " << event << endl;
 
+    // Create a text string, which is used to output the text file
+
+    std::vector<int> runlist;
+    
+    std::vector<int> eventlist;
+
+    std::vector<double> num_vec;
+
+    string num_str;
+
+    string intval;
+
+    // Read from the text file
+
+    // ifstream ReadEventListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/Event_61_Event_Numbers_Run%i.txt", run));
+    // ifstream ReadEventListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/Unblinded_Spike_Event_Numbers_Part%i.txt", run));
+    ifstream ReadEventListFile("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/Before_After_Ev61_Events/F24_Before_Ev61.txt");
+
+    // Use a while loop together with the getline() function to read the file line by line
+
+    /*while (getline(ReadEventListFile, intval)) {
+
+        // Output the text from the file
+
+        eventlist.push_back(stod(intval));
+        
+    }*/
+
+    while (getline(ReadEventListFile, intval)) {
+
+        num_vec.clear();
+
+        num_str.clear();
+
+        intval.push_back('\t');
+
+        for (char ch : intval) {
+            
+            if (ch != '\t') {num_str.push_back(ch);}
+            
+            else if (ch == '\t') {num_vec.push_back(stod(num_str)); num_str.clear();}
+        
+        }
+
+        runlist.push_back(num_vec[0]);
+
+        eventlist.push_back(num_vec[1]);
+        
+    }
+    
+    // Close the file
+
+    ReadEventListFile.close();
+
+    ReadEventListFile.clear();
+
     int ADCSIZE = 45;
     TH1D *h_wf = new TH1D("h_wf", "Waveform", ADCSIZE, 0, ADCSIZE);
 
-    // int data_num = 9; int vers_num = 4;
+    for (size_t iEvent = 0; iEvent < eventlist.size(); iEvent++) {
 
-    int data_num = 41; int vers_num = 5;
+        int run_iterable = runlist[iEvent];
 
-    bool old_channel_map = false;
+        int event_iterable = eventlist[iEvent];
 
-    if (vers_num < 5) {old_channel_map = true;}
+        // int data_num = 9; int vers_num = 4;
 
-    else if (vers_num == 5) {old_channel_map = false;}
+        int data_num = 41; int vers_num = 5;
 
-    TFile *f; 
-    //your root file location here
-///        if(gSystem->AccessPathName(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/run%i_processed_v4.root", iRun))){
-    if (gSystem->AccessPathName(Form("/data%i/coherent/data/d2o/processedData/run%i_processed_v%i.root", data_num, run, vers_num))) {
-///        if(gSystem->AccessPathName(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/run%i_processed_v4.root", iRun))){
-        cout << "Could not open file" << endl;
-        return -1; 
-    } else{
-///            f = new TFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/run%i_processed_v4.root", iRun));
-        f = new TFile(Form("/data%i/coherent/data/d2o/processedData/run%i_processed_v%i.root", data_num, run, vers_num));
-///            f = new TFile(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/run%i_processed_v4.root", iRun));
-    }
+        if (run_iterable <= 14976) {data_num = 9; vers_num = 4;}
 
-    TTree* t = (TTree*)f->Get("tree");
+        else if (run_iterable > 14976 && run_iterable < 15696) {data_num = 41; vers_num = 4;}
 
-    // Declaration of leaf types
-    Int_t           eventID;
-    Int_t           nSamples[32];
-    Short_t         adcVal[32][45];
-    Double_t        baselineMean[32];
-    Double_t        baselineRMS[32];
-    Double_t        pulseH[32];
-    Int_t           peakPosition[32];
-    Double_t        area[32];
-    Long64_t        nsTime;
-    Int_t           triggerBits;
+        else if (run_iterable >= 15696) {data_num = 41; vers_num = 5;}
 
-    // List of branches
-    TBranch        *b_eventID;
-    TBranch        *b_nSamples;
-    TBranch        *b_adcVal;
-    TBranch        *b_baselineMean;
-    TBranch        *b_baselineRMS;
-    TBranch        *b_pulseH;
-    TBranch        *b_peakPosition;
-    TBranch        *b_area;
-    TBranch        *b_nsTime;
-    TBranch        *b_triggerBits;
+        bool old_channel_map = false;
 
-    t->SetBranchAddress("eventID", &eventID, &b_eventID);
-    t->SetBranchAddress("nSamples", &nSamples, &b_nSamples);
-    t->SetBranchAddress("adcVal", adcVal, &b_adcVal);
-    t->SetBranchAddress("baselineMean", baselineMean, &b_baselineMean);
-    t->SetBranchAddress("baselineRMS", baselineRMS, &b_baselineRMS);
-    t->SetBranchAddress("pulseH", pulseH, &b_pulseH);
-    t->SetBranchAddress("peakPosition", &peakPosition, &b_peakPosition);
-    t->SetBranchAddress("area", area, &b_area);
-    t->SetBranchAddress("nsTime", &nsTime, &b_nsTime);
-    t->SetBranchAddress("triggerBits", &triggerBits, &b_triggerBits);
+        if (vers_num < 5) {old_channel_map = true;}
 
-    Long64_t tentry = t->LoadTree(event);           // event - 1
+        else if (vers_num == 5) {old_channel_map = false;}
 
-    b_eventID->GetEntry(tentry);
-    b_nSamples->GetEntry(tentry);
-    b_adcVal->GetEntry(tentry);
-    b_baselineMean->GetEntry(tentry);
-    b_baselineRMS->GetEntry(tentry);
-    b_pulseH->GetEntry(tentry);
-    b_peakPosition->GetEntry(tentry);
-    b_area->GetEntry(tentry);
-    b_nsTime->GetEntry(tentry);
-    b_triggerBits->GetEntry(tentry);
+        TFile *f; 
+        //your root file location here
+        // if(gSystem->AccessPathName(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/run%i_processed_v4.root", iRun))){
+        if (gSystem->AccessPathName(Form("/data%i/coherent/data/d2o/processedData/run%i_processed_v%i.root", data_num, run_iterable, vers_num))) {
+            // if(gSystem->AccessPathName(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/run%i_processed_v4.root", iRun))){
+            cout << "Could not open file" << endl;
+            return -1; 
+        } else{
+            // f = new TFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/run%i_processed_v4.root", iRun));
+            f = new TFile(Form("/data%i/coherent/data/d2o/processedData/run%i_processed_v%i.root", data_num, run_iterable, vers_num));
+            // f = new TFile(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/run%i_processed_v4.root", iRun));
+        }
 
-    for (int iChan = 0; iChan < 26; iChan++) {
+        TTree* t = (TTree*)f->Get("tree");
 
-        if (old_channel_map) {if (iChan == 12 || iChan == 13 || iChan == 14) {continue;}}
+        // Declaration of leaf types
+        Int_t           eventID;
+        Int_t           nSamples[32];
+        Short_t         adcVal[32][45];
+        Double_t        baselineMean[32];
+        Double_t        baselineRMS[32];
+        Double_t        pulseH[32];
+        Int_t           peakPosition[32];
+        Double_t        area[32];
+        Long64_t        nsTime;
+        Int_t           triggerBits;
 
-        else if (!old_channel_map) {if (iChan == 23 || iChan == 24 || iChan == 25) {continue;}}
+        // List of branches
+        TBranch        *b_eventID;
+        TBranch        *b_nSamples;
+        TBranch        *b_adcVal;
+        TBranch        *b_baselineMean;
+        TBranch        *b_baselineRMS;
+        TBranch        *b_pulseH;
+        TBranch        *b_peakPosition;
+        TBranch        *b_area;
+        TBranch        *b_nsTime;
+        TBranch        *b_triggerBits;
 
-        for (int i = 0; i < ADCSIZE; i++) {
+        t->SetBranchAddress("eventID", &eventID, &b_eventID);
+        t->SetBranchAddress("nSamples", &nSamples, &b_nSamples);
+        t->SetBranchAddress("adcVal", adcVal, &b_adcVal);
+        t->SetBranchAddress("baselineMean", baselineMean, &b_baselineMean);
+        t->SetBranchAddress("baselineRMS", baselineRMS, &b_baselineRMS);
+        t->SetBranchAddress("pulseH", pulseH, &b_pulseH);
+        t->SetBranchAddress("peakPosition", &peakPosition, &b_peakPosition);
+        t->SetBranchAddress("area", area, &b_area);
+        t->SetBranchAddress("nsTime", &nsTime, &b_nsTime);
+        t->SetBranchAddress("triggerBits", &triggerBits, &b_triggerBits);
 
-            h_wf->SetBinContent(i + 1, adcVal[iChan][i] - baselineMean[iChan]);
+        Long64_t tentry = t->LoadTree(event_iterable);           // event_iterable - 1
+
+        b_eventID->GetEntry(tentry);
+        b_nSamples->GetEntry(tentry);
+        b_adcVal->GetEntry(tentry);
+        b_baselineMean->GetEntry(tentry);
+        b_baselineRMS->GetEntry(tentry);
+        b_pulseH->GetEntry(tentry);
+        b_peakPosition->GetEntry(tentry);
+        b_area->GetEntry(tentry);
+        b_nsTime->GetEntry(tentry);
+        b_triggerBits->GetEntry(tentry);
+
+        std::filesystem::create_directory(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/wf_image/run_%i_event_%i", run_iterable, event_iterable));
+
+        for (int iChan = 0; iChan < 26; iChan++) {
+
+            if (old_channel_map) {if (iChan == 12 || iChan == 13 || iChan == 14) {continue;}}
+
+            else if (!old_channel_map) {if (iChan == 23 || iChan == 24 || iChan == 25) {continue;}}
+
+            for (int i = 0; i < ADCSIZE; i++) {
+
+                h_wf->SetBinContent(i + 1, adcVal[iChan][i] - baselineMean[iChan]);
+
+            }
+
+            h_wf->GetXaxis()->SetTitle("Time (1 bin = 16 ns)");
+            h_wf->GetYaxis()->SetTitle("Amplitude (ADC)");
+            // h_wf->SetMaximum(320);
+            // h_wf->SetMinimum(-20);
+            h_wf->SetLineColor(kBlack);
+            h_wf->SetLineWidth(3);
+            h_wf->Draw();
+            // if (run == 17006) {h_wf->SetLineColor(kGreen);}
+            // else if (run == 17032) {h_wf->SetLineColor(kRed);}
+            // else if (run == 17085) {h_wf->SetLineColor(kBlue);}
+            // else if (run == 17146) {h_wf->SetLineColor(kBlack);}
+            // else if (run == 17172) {h_wf->SetLineColor(kAzure);}
+            // else if (run == 17197) {h_wf->SetLineColor(kViolet);}
+            gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/wf_image/run_%i_event_%i/wf_run_%i_event_%i_ch_%i.png", run_iterable, event_iterable, run_iterable, event_iterable, iChan));
+            // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/wf_image/run_%i_event_%i/wf_run_%i_event_%i_ch_%i.png", run_iterable, event_iterable, run_iterable, event_iterable, iChan));
+            h_wf->Reset();
 
         }
 
-        h_wf->GetXaxis()->SetTitle("Time (1 bin = 16 ns)");
-        h_wf->GetYaxis()->SetTitle("Amplitude (ADC)");
-        // h_wf->SetMaximum(320);
-        // h_wf->SetMinimum(-20);
-        h_wf->SetLineColor(kBlack);
-        h_wf->SetLineWidth(3);
-        h_wf->Draw();
-        // if (run == 17006) {h_wf->SetLineColor(kGreen);}
-        // else if (run == 17032) {h_wf->SetLineColor(kRed);}
-        // else if (run == 17085) {h_wf->SetLineColor(kBlue);}
-        // else if (run == 17146) {h_wf->SetLineColor(kBlack);}
-        // else if (run == 17172) {h_wf->SetLineColor(kAzure);}
-        // else if (run == 17197) {h_wf->SetLineColor(kViolet);}
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/wf_image/wf_run_%i_event_%i_ch_%i.png", run, event, iChan));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/wf_image/wf_run_%i_event_%i_ch_%i.png", run, event, iChan));
-        h_wf->Reset();
+        cout << "\n" << "Run, Event Number & triggerBits Value = " << run_iterable << " " << event_iterable << " " << triggerBits << endl;
+
+        f->Close();
 
     }
-
-    f->Close();
-
-    cout << "\n" << "Run, Event Number & triggerBits Value = " << run << " " << event << " " << triggerBits << endl;
 
     cout << "\n" << "End of code." << endl;
     
