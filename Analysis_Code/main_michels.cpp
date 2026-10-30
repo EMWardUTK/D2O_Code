@@ -127,6 +127,8 @@ std::vector<double> MichelSiPMNoiseAvg5{ 214.9131176,219.8434706,227.0522353,211
 
 std::vector<double> MichelSiPMNoiseAvg6{ 202.2175,214.0718,190.558875,202.427125,209.80825,212.1195,195.1185,225.44875,227.461 };                               // May 24, 2025 - Aug 23, 2025
 
+std::vector<double> MichelSiPMNoiseAvg7{ 201.0280968,219.3897823,216.1231694,207.7725242,209.4667177,215.816371,227.0340161,231.9643629,268.8965081 };          // Aug 11, 2025 - Jun 24, 2026
+
 // 251.0594118,246.5616875,243.1353529,238.1902941,234.0304118,222.7274706,213.5342941,240.3322941,354.5087647
 
 std::vector<double> MinMuonSiPMCut1{ 400,500,800,1000,300,400,350,250,400 };            // Jul 17, 2023 - Jan 30, 2024
@@ -134,6 +136,10 @@ std::vector<double> MinMuonSiPMCut1{ 400,500,800,1000,300,400,350,250,400 };    
 std::vector<double> MinMuonSiPMCut2{ 600,700,900,1100,400,500,450,350,500 };            // Feb 9, 2024 - Dec 15, 2024
 
 std::vector<double> MinMuonSiPMCut3{ 500,600,900,1100,400,400,350,300,500 };            // Jan 12, 2025 - Aug 24, 2025
+
+std::vector<double> MinMuonSiPMCut4{ 500,600,800,900,400,500,400,400,500 };             // Aug 11, 2025 - Jun 24, 2026
+
+std::vector<double> integralToPEF25S26{ 104.1735026,102.1484265,105.5107949,100.8622726,107.9768889,108.4633248,107.4503248,106.1125983,104.1273932,112.0,105.3396068,104.9230085 };            // Aug 11, 2025 - Jun 24, 2026
 
 template<typename T>
 double getAverage(std::vector<T> const& v) {
@@ -406,6 +412,8 @@ int main(int argc, char *argv[])
 
     int num_veto_found_10 = 0;
 
+    int four_sec_ev61_count = 0;
+
     /* Initialize histograms */                 // NUMBER OF BINS SHOULD BE A MULTIPLE OF THE SMALLEST AXIS UNIT!!! (OR LENGTH OF AXIS DIVIDED BY SMALLEST AXIS UNIT?)
 
     TH1D* h_amp = new TH1D("h_amp", "Distribution of All Internally Triggered Event Amplitude Values", 2000, 0, 2000);
@@ -446,9 +454,11 @@ int main(int argc, char *argv[])
 
     TH1D* h_intlowLED = new TH1D("h_intlowLED", "Distribution of Low Light LED Integral Values", 150, -500, 1000);
 
-    TH1D* h_inthighLED = new TH1D("h_inthighLED", "Distribution of High Light LED Integral Values", 400, -2000, 2000);            //, 11000, -1000, 10000);
+    TH1D* h_inthighLED = new TH1D("h_inthighLED", "Distribution of High Light LED Integral Values", 200, 0, 2000);            //, 11000, -1000, 10000);
 
     TH1D* h_intminLED = new TH1D("h_intminLED", "Distribution of Minimum Bias LED Integral Values", 150, -500, 1000);
+
+    TH1D* h_inttemp = new TH1D("h_inttemp", "High Light Integral Values, One Hour Run", 200, 0, 2000);
 
     TH1D* h_MB_HL_dt = new TH1D("h_MB_HL_dt", "Delta-t Between High Light Events and Most Recent Min Bias Event", 2250, 0, 36 * pow(10, 6));
 
@@ -486,9 +496,11 @@ int main(int argc, char *argv[])
 
     TH1D* h_var = new TH1D("h_var", "Distribution of Variance in Peak Start Times", 48, 0, 480);
 
-    TH1D* h_spheLL = new TH1D("h_spheLL", "Distribution of Single Channel Low Light Integral Values", 1000, -500, 500);
+    TH1D* h_spheMB = new TH1D("h_spheMB", "Single Channel Minimum Bias Integral Values", 1000, -500, 500);
 
-    TH1D* h_spheMB = new TH1D("h_spheMB", "Distribution of Single Channel Minimum Bias Integral Values", 1000, -500, 500);
+    TH1D* h_spheLL = new TH1D("h_spheLL", "Single Channel Low Light Integral Values", 600, -100, 500);
+
+    TH1D* h_sphe_largest_peak = new TH1D("h_sphe_largest_peak", "Largest PMT Peak for Single Channel Single Photoelectron Events", 50, 40, 90);
 
     TH1D* h_intmuons = new TH1D("h_intmuons", "Distribution of Muon Integral Values", 200, 0, 2000);
 
@@ -499,6 +511,10 @@ int main(int argc, char *argv[])
     TH1D* h_intcosmics = new TH1D("h_intcosmics", "Distribution of Cosmic Integral Values", 400, 0, 4000);
 
     TH1D* h_intev61 = new TH1D("h_intev61", "Distribution of Event 61 Integral Values", 2200, -200, 2000);
+
+    TH1D* h_intev61chan = new TH1D("h_intev61chan", "Distribution of Event 61 Channel Integral Values", 2200, -200, 2000);
+
+    TH1D* h_areaev61chan = new TH1D("h_areaev61chan", "Distribution of Event 61 Channel Area Values", 2200, -200, 2000);
 
     TH1D* h_intneu = new TH1D("h_intneu", "Distribution of Beam On Event Integral Values", 1650, -150, 1500);
 
@@ -542,7 +558,13 @@ int main(int argc, char *argv[])
 
     TH1D* h_cent_spke_tB_spmc = new TH1D("h_cent_spke_tB_spmc", "Distribution of Detector Peak TriggerBits Values for Central Spike of Ev61-Det dt Plot, Prior + Simult. Muon Cuts", 40, 0, 40);
 
-    TH1D* h_tvp_int = new TH1D("h_tvp_int", "Distribution of Top Veto Panel Integral Values", 3000, 0, 3000);           // After Ev61 Events
+    TH1D* h_tvp_int = new TH1D("h_tvp_int", "Distribution of Top Veto Panel Integral Values", 2000, -2000, 12000);           // After Ev61 Events
+
+    TH1D* h_svp_int = new TH1D("h_intSVP", "Distribution of Sum of All Side Panel SiPM Integral Values", 2000, -2000, 12000);
+
+    TH1D* h_pmt_int_LE = new TH1D("h_pmt_int_LE", "Low Energy PMT Integral Values", 100, 0, 100);
+
+    TH1D* h_pmt_LP_LE = new TH1D("h_pmt_LP_LE", "Low Energy PMT Highest Peak Values", 1000, 0, 1000);
 
     TH1D* h_neg_dt_ev61_peak_pos = new TH1D("h_neg_dt_ev61_peak_pos", "Distribution of Event 61 Peak Positions for Negative Event 61 - Detector Peak Time Separations", 45, 0, 720);
 
@@ -630,9 +652,43 @@ int main(int argc, char *argv[])
 
     TH1D* h_intmichels_PMT11 = new TH1D("h_intmichels_PMT11", "PMT11 Michel Electron Integral Values", 100, 0, 100);
 
+    TH1D* h_intmichels_S25 = new TH1D("h_intmichels_S25", "Michel Electron Integral Values, with Corrected Vertical Muon Correction", 80, 0, 800);
+
+    TH1D* h_intmichels_F25 = new TH1D("h_intmichels_F25", "Michel Electron Integral Values, with Corrected Vertical Muon Correction", 80, 0, 800);
+
+    TH1D* h_intmichels_S26 = new TH1D("h_intmichels_S26", "Michel Electron Integral Values, with Corrected Vertical Muon Correction", 80, 0, 800);
+
     TH1D* h_muon_pmt_sipm_dt = new TH1D("h_muon_pmt_sipm_dt", "Time Difference Between PMT and SiPM Peaks in Muon Events", 45, -360, 360);
 
     TH1D* h_only_one_sipm = new TH1D("h_only_one_sipm", "Integral Distribution of SiPM8 with No Events Anywhere Else", 200, 0, 2000);
+
+    TH1D* h_sec_interval = new TH1D("h_sec_interval", "Time Separation of Event 61 Events", 2000, 984, 1016);
+
+    TH1D* h_sec_ev61_count = new TH1D("h_sec_ev61_count", "Event 61 Count Per Second", 75, 0, 75);
+
+    TH2D* h_ev61_rate_vs_avg_int = new TH2D("h_ev61_rate_vs_avg_int", "Event 61 Rate vs Average Integral", 20, 50, 70, 200, 1000, 2000);
+
+    TH1D* h_ev61_interval_integral = new TH1D("h_ev61_interval_integral", "Event 61 DAQ Channel Integral Values in Expected Event 61 Intervals", 200, -200, 2000);
+
+    TH1D* h_ev61_interval_dt = new TH1D("h_ev61_interval_dt", "Event 61 DAQ Channel Delta-T Values in Expected Event 61 Intervals", 500, 16661000, 16672000);
+
+    TH1D* h_ev61dt = new TH1D("h_ev61dt", "Delta-T Between Consecutive Event 61 Events", 1000, 16, 17);
+
+    TH1D* h_hl_interval_integral = new TH1D("h_hl_interval_integral", "Event 61 DAQ Channel Integral Values in Expected Event 61 Intervals", 200, -200, 2000);
+
+    TH1D* h_hl_interval_dt = new TH1D("h_hl_interval_dt", "High Light LED Delta-T Values in Expected Event 61 Intervals", 1000, 4664000, 4687000);
+
+    TH1D* h_ll_interval_integral = new TH1D("h_ll_interval_integral", "Event 61 DAQ Channel Integral Values in Expected Event 61 Intervals", 200, -200, 2000);
+
+    TH1D* h_ll_interval_dt = new TH1D("h_ll_interval_dt", "Low Light LED Delta-T Values in Expected Event 61 Intervals", 1000, 12665000, 12688000);
+
+    auto p_ev61_per_sec = new TGraph();
+
+    auto p_hl_per_sec = new TGraph();
+
+    std::vector<long long> HLTimeVal;
+
+    std::vector<long long> Ev61TimeVal;
 
     std::vector<std::vector<double>> amp_on_off_val;
 
@@ -657,10 +713,19 @@ int main(int argc, char *argv[])
     // 16647-16671 = 1723155601-1723242001 = 8/08/24-8/09/24 = file 50  // 16855-16878 = 1723870861-1723953661 = 8/17/24-8/18/24 = file 51
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F24-S25_GR_Runs/F24-S25_GR_%i.txt", run));
     // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F24-S25_BO_Runs/F24-S25_BO_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/test_runs/test_runs_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/s25_runs/s25_runs_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Runs_4084GR/F25-S26_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/F25-S26_GR_Weekly_4084GR/F25-S26_GR_Weekly_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Runs_6235GR/S25-S26_GR_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25-S26_GR_Weekly_6149GR/S25-S26_GR_Weekly_%i.txt", run));
+    // ifstream ReadRunListFile(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/S25F25S26_GR_3_rand_days_%i.txt", run));
 
     // Use a while loop together with the getline() function to read the file line by line
 
     int iLine = 0;
+    
+    int RunListLines = 0;
 
     while (getline(ReadRunListFile, intval1)) {
 
@@ -668,9 +733,9 @@ int main(int argc, char *argv[])
 
         runlist.push_back(stod(intval1));
 
-        iLine += 1;
+        RunListLines += 1;
 
-        if (iLine == 24) {break;}
+        if (RunListLines == 24) {break;}
         
     }
     
@@ -690,7 +755,10 @@ int main(int argc, char *argv[])
 
     // Read from the text file
 
-    ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Vals.txt");          // Vertical_Muon_Peak_Center_1-124_Val_Only.txt         // hl_mean_val_all_1.txt          // hl_mean_val_all_temp.txt
+    // To use F24-S25 data, delete "_F25-S26_GR"
+    // To use F25-S26 data, add "_F25-S26_GR" before "_1-124"
+    // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Vals.txt");          // Vertical_Muon_Peak_Center_1-124_Val_Only.txt         // hl_mean_val_all_1.txt          // hl_mean_val_all_temp.txt
+    ifstream ReadHLMFile("Vertical_Muon_Peak_Center_F25-S26_GR_1-124_Run_Vals.txt");
 
     // Use a while loop together with the getline() function to read the file line by line
 
@@ -706,7 +774,7 @@ int main(int argc, char *argv[])
         
     }
 
-    double defaultHLmean = 1813.94;           // = 1813.94; (12/1/24 Vert Muon Mean Value)         // = 34.5323; (11/26/24 HL Mean Value)         // sumHLmean / HLmeancounter;           // sumHLmean / HLmeancounter = 1783.874 (Averaged value)
+    double defaultHLmean = 1813.94;         // = 1613.271109; (F25-S26 Vert Muon Mean Value)           // = 1813.94; (12/1/24 Vert Muon Mean Value)         // = 34.5323; (11/26/24 HL Mean Value)         // sumHLmean / HLmeancounter;           // sumHLmean / HLmeancounter = 1783.874 (Averaged value)
 
     double currentHLmean = defaultHLmean;
 
@@ -718,16 +786,21 @@ int main(int argc, char *argv[])
 
     ReadHLMFile.clear();
 
+    int runnum = 0;
+
     // Create and open a text file
-    ofstream MIFile(Form("Michel_Integrals_Run%i.txt", run));
     ofstream MERFile(Form("Michel_Event_Rate_Run%i.txt", run));
+    ofstream MIFile(Form("Michel_Integrals_Run%i.txt", run));
     ofstream MBVFile(Form("Michel_Bin_Vals_Run%i.txt", run));
     ofstream uBVFile(Form("Muon_Bin_Vals_Run%i.txt", run));
     ofstream HLBVFile(Form("High_Light_Bin_Vals_Run%i.txt", run));
     ofstream LLBVFile(Form("Low_Light_Bin_Vals_Run%i.txt", run));
     ofstream MBBVFile(Form("Min_Bias_Bin_Vals_Run%i.txt", run));
+    ofstream HLPCFile(Form("High_Light_Peak_Center_F25-S26_GR_Run%i.txt", run));
     ofstream MIAFile(Form("Michel_Integral_Amplitude_Run%i.txt", run));
     ofstream MIPFile(Form("Michel_Integral_Peak_Center_Run%i.txt", run));
+    ofstream E61File(Form("Event_61_Peaks_Per_Second_Run%i.txt", run));
+    ofstream E61EFile(Form("Event_61_Event_Numbers_Run%i.txt", run));
 
     // for(int iRun = run; iRun <= last_run; iRun++) {
     
@@ -736,6 +809,8 @@ int main(int argc, char *argv[])
         // int run_iterable = iRun;
 
         int run_iterable = runlist[iRun];
+
+        runnum = run_iterable;
 
         // Below system makes code work for old and new SiPM/Event61 channel maps (won't work for runs 10367 - 10678)
 
@@ -754,6 +829,12 @@ int main(int argc, char *argv[])
         if (run_iterable < 20000) {echo_cut = 1000;}
 
         else if (run_iterable >= 20000) {echo_cut = 2000;}
+
+        int ev61_min = 1200; int ev61_max = 2000;
+
+        if (run_iterable < 24813) {ev61_min = 1200; ev61_max = 2000;}
+
+        else if (run_iterable >= 24813) {ev61_min = 700; ev61_max = 1000;}
 
         bool old_channel_map = false; int Event61Chan = 15; int SiPM1Chan = 16; int SiPM2Chan = 17; int SiPM3Chan = 18; int SiPM4Chan = 19; int SiPM5Chan = 20; int SiPM6Chan = 21; int SiPM7Chan = 22; int SiPM8Chan = 23; int SiPM9Chan = 24; int SiPM10Chan = 25;
 
@@ -794,7 +875,12 @@ int main(int argc, char *argv[])
 
         // Read from the text file
 
-        ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Nums.txt");          // Vertical_Muon_Peak_Center_1-124_No_HL_Mean_Correction.txt          // hl_mean_val_look_up_1.txt          // hl_mean_val_look_up_temp.txt
+        // To use F24-S25 data, delete "_F25-S26_GR"
+        // To use F25-S26 data, add "_F25-S26_GR" before "_1-124"
+        // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_1-124_Run_Nums.txt");          // Vertical_Muon_Peak_Center_1-124_No_HL_Mean_Correction.txt          // hl_mean_val_look_up_1.txt          // hl_mean_val_look_up_temp.txt
+        // ifstream ReadHLMFile("Vertical_Muon_Peak_Center_F25-S26_GR_1-124_Run_Nums.txt");
+        // Runs 16830 - 32398 (F24-S26)
+        ifstream ReadHLMFile("Vertical_Muon_Peak_Center_All_F24-S26_GR_Run_Nums.txt");
 
         // Use a while loop together with the getline() function to read the file line by line
 
@@ -826,11 +912,21 @@ int main(int argc, char *argv[])
             
         }
 
+        // if (run_iterable < 24813) {defaultHLmean = 1813.94;}           // = 1813.94; (12/1/24 Vert Muon Mean Value)
+
+        // else if (run_iterable >= 24813) {defaultHLmean = 1613.271109;}         // = 1613.271109; (F25-S26 Vert Muon Mean Value)
+
         // Close the file
 
         ReadHLMFile.close();
 
         ReadHLMFile.clear();
+
+        // Experimental rotational correction, to correct for Michel integral change over time leftover/created by vertical muon correction
+
+        double rot_up_corr = run_starttime * 0.00000000042694381419 + 0.2600815812;
+
+        double rot_down_corr = run_starttime * -0.00000000060991973456 + 2.0570263125;
 
         // Create a text string, which is used to output the text file
 
@@ -918,7 +1014,9 @@ int main(int argc, char *argv[])
 
         else if (run_starttime > 1734260462 && run_starttime <= 1748775661) {vp_cut_vals = MichelSiPMNoiseAvg5;}
 
-        else if (run_starttime > 1748775661) {vp_cut_vals = MichelSiPMNoiseAvg6;}
+        else if (run_starttime > 1748775661 && run_starttime < 1754892061) {vp_cut_vals = MichelSiPMNoiseAvg6;}
+
+        else if (run_starttime >= 1754892061) {vp_cut_vals = MichelSiPMNoiseAvg7;}
 
         // Select appropriate Minimum Muon values
 
@@ -928,7 +1026,9 @@ int main(int argc, char *argv[])
 
         else if (run_starttime > 1706628002 && run_starttime <= 1734260462) {min_muon_vals = MinMuonSiPMCut2;}
 
-        else if (run_starttime > 1734260462) {min_muon_vals = MinMuonSiPMCut3;}
+        else if (run_starttime > 1734260462 && run_starttime < 1754892061) {min_muon_vals = MinMuonSiPMCut3;}
+
+        else if (run_starttime >= 1754892061) {min_muon_vals = MinMuonSiPMCut4;}
 
         // TTree *t = (TTree *) f->Get("wf");
         TTree* t = (TTree*)f->Get("tree");
@@ -1149,6 +1249,8 @@ int main(int argc, char *argv[])
 
         std::vector<int> u_event_bin_val;
 
+        std::vector<int> ev61_events_vec;
+
         long long last_event_time = 0.0;
 
         long long last_int_trig_event_time = 0.0;
@@ -1170,6 +1272,28 @@ int main(int argc, char *argv[])
         long long prev_event_time = 0.0;
 
         int prev_event_tB = 0.0;
+
+        long long last_second = 0.0;
+
+        long long lastHLtime = 0.0;
+
+        long long lastLLtime = 0.0;
+
+        long long lastEv61time = 0.0;
+
+        long long firsteventtime = 0.0;
+
+        long long lasteventtime = 0.0;
+
+        int second_count = 1;
+
+        int hl_per_sec_count = 0;
+        
+        int sns_beam_spill_count = 0;
+
+        int highLEDcounter = 0;
+
+        double Ev61IntTot = 0.0;
     
         // Can use either "t->GetEntries()" or "numEntries" or number
         for (int iEnt = 0; iEnt < t->GetEntries(); iEnt++) {
@@ -1219,6 +1343,7 @@ int main(int argc, char *argv[])
             double Ev61Energy = 0.;
             double Ev61Peak = 0.;
             double chan_15_start = 0.;
+            double largest_peak = 0.;
 
             std::vector<double> all_chan_start;
             std::vector<double> all_chan_start_adj;
@@ -1243,6 +1368,8 @@ int main(int argc, char *argv[])
             bool top_vp_event = false;
 
             bool pulse_at_end = false;
+
+            bool max_sphe_int_value = false;
 
             int pulse_at_end_count = 0;
 
@@ -1290,6 +1417,8 @@ int main(int argc, char *argv[])
 
                 if (iChan <= 11) {sphe_int = run_starttime * y_val[iChan] + b_val[iChan];}          // run_starttime * y_val[iChan] + b_val[iChan];}          // integralToPETemp[iChan];}
 
+                if (run_starttime >= 1754892061 && iChan <= 11) {sphe_int = integralToPEF25S26[iChan];}
+
                 if (iChan <= 11) {h_blM_pmt->Fill(baselineMean[iChan]);}
 
                 else if (iChan >= SiPM1Chan && iChan <= SiPM10Chan) {h_blM_vp->Fill(baselineMean[iChan]);}
@@ -1307,6 +1436,7 @@ int main(int argc, char *argv[])
                     Ev61Energy = 0.0;
 
                     for (int iBin = 1; iBin <= h_wf->GetNbinsX(); iBin++) {
+                        // for (int iBin = 23; iBin <= 39; iBin++) {           // Tulasi's integration window for looking for Event 61 events, with 1000 ADC threshold
 
                         double iBinContent = h_wf->GetBinContent(iBin);
 
@@ -1314,15 +1444,25 @@ int main(int argc, char *argv[])
 
                     }
 
-                    if (Ev61Energy > EV61_THRESHOLD) {
+                    if (Ev61Energy > ev61_min && Ev61Energy < ev61_max) {
 
                         all_chan_beam = true;
 
                         ch15_on += 1;
 
+                        Ev61IntTot += Ev61Energy;
+
+                        sns_beam_spill_count += 1;
+
+                        ev61_events_vec.push_back(iEnt);
+
                     }
 
-                    if (triggerBits == 1 || triggerBits == 3 || triggerBits == 33 || triggerBits == 35) {h_intev61->Fill(Ev61Energy);}
+                    h_intev61chan->Fill(Ev61Energy);
+
+                    h_areaev61chan->Fill(area[iChan]);
+
+                    if (triggerBits == 1 || triggerBits == 3 || triggerBits == 33 || triggerBits == 35) {h_intev61->Fill(Ev61Energy);}          // all_chan_beam = true; sns_beam_spill_count += 1;}
                     
                     /*
                     if (Ev61Energy > 1650 && Ev61Energy < 1750) {
@@ -1474,6 +1614,9 @@ int main(int argc, char *argv[])
 
                                 h_pst_v_pint->Fill(p.start, p.energy);
 
+                                // Find the largest PMT peak
+                                if (peak > largest_peak) {largest_peak = peak;}
+
                                 if (!peak_in_chan) {
 
                                     num_chan += 1;
@@ -1588,13 +1731,15 @@ int main(int argc, char *argv[])
 
                     if (iChan == 0 && triggerBits == 4) {
 
-                        h_spheLL->Fill(AllPulseEnergy);
+                        h_spheMB->Fill(AllPulseEnergy);
 
                     }
 
                     if (iChan == 0 && triggerBits == 16) {
 
-                        h_spheMB->Fill(AllPulseEnergy);
+                        h_spheLL->Fill(AllPulseEnergy);
+
+                        if (AllPulseEnergy > 100 && AllPulseEnergy < 130) {max_sphe_int_value = true;}
 
                     }
 
@@ -1782,7 +1927,7 @@ int main(int argc, char *argv[])
 
             avg_pulse.start = nsTime + pulse_start_time;                                                        // Need a way to weed out secondary pulses - use weighted average?
             avg_pulse.end = nsTime + pulse_end_time;
-            avg_pulse.energy = std::accumulate(all_chan_energy.begin(), all_chan_energy.end(), 0.0) / (currentHLmean / defaultHLmean);           // Integrals still sum over secondary peaks discarded in .start and .end values 
+            avg_pulse.energy = (std::accumulate(all_chan_energy.begin(), all_chan_energy.end(), 0.0)) / (currentHLmean / defaultHLmean);            // * rot_up_corr           // Integrals still sum over secondary peaks discarded in .start and .end values 
             avg_pulse.peak = std::accumulate(all_chan_peak.begin(), all_chan_peak.end(), 0.0);
             avg_pulse.number = num_chan_over_1phe;
             avg_pulse.beam = all_chan_beam;
@@ -1809,6 +1954,76 @@ int main(int argc, char *argv[])
             avg_pulse.vp_int_22 = p_int_22;
             avg_pulse.vp_int_23 = p_int_23;
             avg_pulse.vp_int_top = p_int_24 + p_int_25;
+
+            if (avg_pulse.energy <= 100 && avg_pulse.trigger == 2) {h_pmt_int_LE->Fill(avg_pulse.energy); h_pmt_LP_LE->Fill(largest_peak);}
+
+            if (triggerBits == 16 && max_sphe_int_value) {h_sphe_largest_peak->Fill(largest_peak);}
+
+            if (avg_pulse.beam && run_starttime + avg_pulse.start * pow(10, -9) >= 1745878970.654111 && run_starttime + avg_pulse.start * pow(10, -9) <= 1745878974.654176) {four_sec_ev61_count += 1;}
+
+            if (avg_pulse.start - lastHLtime >= 4664000 && avg_pulse.start - lastHLtime <= 4687000) {
+
+                h_hl_interval_integral->Fill(Ev61Energy);
+
+                h_hl_interval_dt->Fill(avg_pulse.start - lastHLtime);
+
+            }
+
+            if (avg_pulse.start - lastLLtime >= 12665000 && avg_pulse.start - lastLLtime <= 12688000) {
+
+                h_ll_interval_integral->Fill(Ev61Energy);
+
+                h_ll_interval_dt->Fill(avg_pulse.start - lastLLtime);
+
+            }
+            
+            if (avg_pulse.start - lastEv61time >= 16661000 && avg_pulse.start - lastEv61time <= 16672000) {
+
+                h_ev61_interval_integral->Fill(Ev61Energy);
+
+                h_ev61_interval_dt->Fill(avg_pulse.start - lastEv61time);
+
+            }
+
+            if (avg_pulse.trigger == 8) {HLTimeVal.push_back((run_starttime + avg_pulse.start) / pow(10, 9)); highLEDcounter += 1; hl_per_sec_count += 1; lastHLtime = avg_pulse.start;}
+
+            if (avg_pulse.trigger == 16) {lastLLtime = avg_pulse.start;}
+
+            avg_pulse.beam = false;
+
+            // if (Ev61Energy > ev61_min && Ev61Energy < ev61_max && avg_pulse.start - lastEv61time >= 16665000 && avg_pulse.start - lastEv61time <= 16668000) {avg_pulse.beam = true; Ev61TimeVal.push_back((run_starttime + avg_pulse.start) / pow(10, 9));}
+
+            if (Ev61Energy > ev61_min && Ev61Energy < ev61_max && ((avg_pulse.start - lastHLtime >= 4664000 && avg_pulse.start - lastHLtime <= 4687000) || (avg_pulse.start - lastLLtime >= 12665000 && avg_pulse.start - lastLLtime <= 12688000))) {avg_pulse.beam = true; Ev61TimeVal.push_back((run_starttime + avg_pulse.start) / pow(10, 9));}
+
+            if (Ev61Energy > ev61_min && Ev61Energy < ev61_max) {h_ev61dt->Fill((avg_pulse.start - lastEv61time) / pow(10, 6)); lastEv61time = avg_pulse.start;}
+
+            if (firsteventtime == 0.0) {firsteventtime = avg_pulse.start;}
+
+            else {lasteventtime = avg_pulse.start;}
+
+            if (avg_pulse.start - last_second >= pow(10, 9)) {
+
+                if (ev61_events_vec.size() >= 70) {for (int iEv61 = 0; iEv61 < ev61_events_vec.size(); iEv61++) {E61EFile << ev61_events_vec[iEv61] << endl;}}
+
+                ev61_events_vec.clear();
+                
+                p_ev61_per_sec->AddPoint(run_starttime + second_count, sns_beam_spill_count);
+
+                p_hl_per_sec->AddPoint(run_starttime + second_count, hl_per_sec_count);
+
+                h_sec_interval->Fill((avg_pulse.start - last_second)/ pow(10, 6));
+
+                h_sec_ev61_count->Fill(sns_beam_spill_count);
+
+                if (sns_beam_spill_count > 0) {h_ev61_rate_vs_avg_int->Fill(sns_beam_spill_count, Ev61IntTot / sns_beam_spill_count);}
+                
+                E61File << run_starttime + second_count << "\t" << sns_beam_spill_count << endl;
+                
+                second_count += 1; last_second = avg_pulse.start; sns_beam_spill_count = 0; Ev61IntTot = 0.0; hl_per_sec_count = 0;
+
+            }
+
+            h_svp_int->Fill(avg_pulse.side_vp_energy); h_tvp_int->Fill(avg_pulse.top_vp_energy);
 
             if (avg_pulse.trigger == 34) {h_34detint->Fill(avg_pulse.energy); h_34vpint->Fill(avg_pulse.side_vp_energy + avg_pulse.top_vp_energy);}
 
@@ -1885,9 +2100,13 @@ int main(int argc, char *argv[])
 
             if (avg_pulse.trigger != 0 && avg_pulse.trigger != 4 && avg_pulse.trigger != 8 && avg_pulse.trigger != 16) {
 
-                h_ml->Fill(num_chan_over_1phe);
+                // if (avg_pulse.trigger != 1 && avg_pulse.trigger != 3 && avg_pulse.trigger != 33 && avg_pulse.trigger != 35 && p_int_16 < vp_cut_vals[0] && p_int_17 < vp_cut_vals[1] && p_int_18 < vp_cut_vals[2] && p_int_19 < vp_cut_vals[3] && p_int_20 < vp_cut_vals[4] && p_int_21 < vp_cut_vals[5] && p_int_22 < vp_cut_vals[6] && p_int_23 < vp_cut_vals[7] && avg_pulse.vp_int_top < vp_cut_vals[8]) {
+                if (avg_pulse.trigger == 2) {
+                    h_ml->Fill(num_chan_over_1phe);
 
-                h_ml_v_int->Fill(num_chan_over_1phe, avg_pulse.energy);
+                    h_ml_v_int->Fill(num_chan_over_1phe, avg_pulse.energy);
+
+                }
 
             }
 
@@ -1958,6 +2177,8 @@ int main(int argc, char *argv[])
                 // run_iterable >= 16000 && run_iterable <= 16200           // run_iterable >= 16300 && run_iterable <= 16500
 
                 h_inthighLED->Fill(avg_pulse.energy);
+
+                h_inttemp->Fill(avg_pulse.energy);
 
                 inthighLED.push_back(avg_pulse.energy);
 
@@ -2292,6 +2513,12 @@ int main(int argc, char *argv[])
 
                 h_intmichels_PMT11->Fill(all_chan_energy[11]);
 
+                if (run_iterable >= 22338 && run_iterable <= 22361) {h_intmichels_S25->Fill(mult_pulses.back().energy);}
+
+                if (run_iterable >= 25749 && run_iterable <= 25772) {h_intmichels_F25->Fill(mult_pulses.back().energy);}
+
+                if (run_iterable >= 31291 && run_iterable <= 31314) {h_intmichels_S26->Fill(mult_pulses.back().energy);}
+
                 h_dt_61_16->Fill(mult_pulses.back().wf_time + mult_pulses.back().vp_start_16 - mult_pulses.front().wf_time); h_vpint_16->Fill(mult_pulses.back().vp_int_16);
 
                 h_dt_61_17->Fill(mult_pulses.back().wf_time + mult_pulses.back().vp_start_17 - mult_pulses.front().wf_time); h_vpint_17->Fill(mult_pulses.back().vp_int_17);
@@ -2376,7 +2603,7 @@ int main(int argc, char *argv[])
                         double p2 = mult_pulses[j].peak;
                         double t2 = mult_pulses[j].start;
                         double d2 = mult_pulses[j].end - t2;
-                        double dt = t2 - t1;
+                        double dt = time_count;         // t2 - t1;
                         // Potential issues, any xi < 0 or e2 > e1          (Include new variables in detecting issues)
                         if (dt < 0 || e1 < 0 || e2 < 0 || e1 < e2 ||
                             p1 > maxPeak || p2 > maxPeak) {issue = true;}
@@ -2391,7 +2618,7 @@ int main(int argc, char *argv[])
                         double tr2 = mult_pulses[j].trigger;
                         double l2 = mult_pulses[j].length;
 
-                        michelTree->SetBranchAddress("entry", &entry);
+                        /*michelTree->SetBranchAddress("entry", &entry);
                         michelTree->SetBranchAddress("e1", &e1);
                         michelTree->SetBranchAddress("p1", &p1);
                         michelTree->SetBranchAddress("t1", &t1);
@@ -2413,7 +2640,7 @@ int main(int argc, char *argv[])
                         michelTree->SetBranchAddress("tr2", &tr2);
                         michelTree->SetBranchAddress("l2", &l2);
 
-                        michelTree->Fill();
+                        michelTree->Fill();*/
 
                         write_out_counter += 1;
 
@@ -2512,17 +2739,17 @@ int main(int argc, char *argv[])
 
             if (!michel_event && avg_pulse.number >= 10 && avg_pulse.trigger != 0 && avg_pulse.trigger != 4 && avg_pulse.trigger != 8 && avg_pulse.trigger != 16) {
 
-                if (avg_pulse.energy > 0 && avg_pulse.energy <= 200) {num_large_found_1 += 1; if (p_int_16 > 750 || p_int_17 > 950 || p_int_18 > 1200 || p_int_19 > 1375 || p_int_20 > 525 || p_int_21 > 700 || p_int_22 > 700 || p_int_23 > 500 || avg_pulse.top_vp_energy > 450) {num_veto_found_1 += 1;}}
+                if (avg_pulse.energy > 0 && avg_pulse.energy <= 200) {num_large_found_1 += 1; if (p_int_16 > min_muon_vals[0] || p_int_17 > min_muon_vals[1] || p_int_18 > min_muon_vals[2] || p_int_19 > min_muon_vals[3] || p_int_20 > min_muon_vals[4] || p_int_21 > min_muon_vals[5] || p_int_22 > min_muon_vals[6] || p_int_23 > min_muon_vals[7] || avg_pulse.vp_int_top > min_muon_vals[8]) {num_veto_found_1 += 1;}}
                 
-                if (avg_pulse.energy > 200 && avg_pulse.energy <= 400) {num_large_found_2 += 1; if (p_int_16 > 750 || p_int_17 > 950 || p_int_18 > 1200 || p_int_19 > 1375 || p_int_20 > 525 || p_int_21 > 700 || p_int_22 > 700 || p_int_23 > 500 || avg_pulse.top_vp_energy > 450) {num_veto_found_2 += 1;}}
+                if (avg_pulse.energy > 200 && avg_pulse.energy <= 400) {num_large_found_2 += 1; if (p_int_16 > min_muon_vals[0] || p_int_17 > min_muon_vals[1] || p_int_18 > min_muon_vals[2] || p_int_19 > min_muon_vals[3] || p_int_20 > min_muon_vals[4] || p_int_21 > min_muon_vals[5] || p_int_22 > min_muon_vals[6] || p_int_23 > min_muon_vals[7] || avg_pulse.vp_int_top > min_muon_vals[8]) {num_veto_found_2 += 1;}}
 
-                if (avg_pulse.energy > 400 && avg_pulse.energy <= 600) {num_large_found_3 += 1; if (p_int_16 > 750 || p_int_17 > 950 || p_int_18 > 1200 || p_int_19 > 1375 || p_int_20 > 525 || p_int_21 > 700 || p_int_22 > 700 || p_int_23 > 500 || avg_pulse.top_vp_energy > 450) {num_veto_found_3 += 1;}}
+                if (avg_pulse.energy > 400 && avg_pulse.energy <= 600) {num_large_found_3 += 1; if (p_int_16 > min_muon_vals[0] || p_int_17 > min_muon_vals[1] || p_int_18 > min_muon_vals[2] || p_int_19 > min_muon_vals[3] || p_int_20 > min_muon_vals[4] || p_int_21 > min_muon_vals[5] || p_int_22 > min_muon_vals[6] || p_int_23 > min_muon_vals[7] || avg_pulse.vp_int_top > min_muon_vals[8]) {num_veto_found_3 += 1;}}
 
-                if (avg_pulse.energy > 600 && avg_pulse.energy <= 800) {num_large_found_4 += 1; if (p_int_16 > 750 || p_int_17 > 950 || p_int_18 > 1200 || p_int_19 > 1375 || p_int_20 > 525 || p_int_21 > 700 || p_int_22 > 700 || p_int_23 > 500 || avg_pulse.top_vp_energy > 450) {num_veto_found_4 += 1;}}
+                if (avg_pulse.energy > 600 && avg_pulse.energy <= 800) {num_large_found_4 += 1; if (p_int_16 > min_muon_vals[0] || p_int_17 > min_muon_vals[1] || p_int_18 > min_muon_vals[2] || p_int_19 > min_muon_vals[3] || p_int_20 > min_muon_vals[4] || p_int_21 > min_muon_vals[5] || p_int_22 > min_muon_vals[6] || p_int_23 > min_muon_vals[7] || avg_pulse.vp_int_top > min_muon_vals[8]) {num_veto_found_4 += 1;}}
 
-                if (avg_pulse.energy > 800 && avg_pulse.energy <= 1000) {num_large_found_5 += 1; if (p_int_16 > 750 || p_int_17 > 950 || p_int_18 > 1200 || p_int_19 > 1375 || p_int_20 > 525 || p_int_21 > 700 || p_int_22 > 700 || p_int_23 > 500 || avg_pulse.top_vp_energy > 450) {num_veto_found_5 += 1;}}
+                if (avg_pulse.energy > 800 && avg_pulse.energy <= 1000) {num_large_found_5 += 1; if (p_int_16 > min_muon_vals[0] || p_int_17 > min_muon_vals[1] || p_int_18 > min_muon_vals[2] || p_int_19 > min_muon_vals[3] || p_int_20 > min_muon_vals[4] || p_int_21 > min_muon_vals[5] || p_int_22 > min_muon_vals[6] || p_int_23 > min_muon_vals[7] || avg_pulse.vp_int_top > min_muon_vals[8]) {num_veto_found_5 += 1;}}
 
-                if (avg_pulse.energy > 1000) {num_large_found_6 += 1; if (p_int_16 > 750 || p_int_17 > 950 || p_int_18 > 1200 || p_int_19 > 1375 || p_int_20 > 525 || p_int_21 > 700 || p_int_22 > 700 || p_int_23 > 500 || avg_pulse.top_vp_energy > 450) {num_veto_found_6 += 1;}}
+                if (avg_pulse.energy > 1000) {num_large_found_6 += 1; if (p_int_16 > min_muon_vals[0] || p_int_17 > min_muon_vals[1] || p_int_18 > min_muon_vals[2] || p_int_19 > min_muon_vals[3] || p_int_20 > min_muon_vals[4] || p_int_21 > min_muon_vals[5] || p_int_22 > min_muon_vals[6] || p_int_23 > min_muon_vals[7] || avg_pulse.vp_int_top > min_muon_vals[8]) {num_veto_found_6 += 1;}}
             
                 // if (avg_pulse.energy > 1200 && avg_pulse.energy <= 1400) {num_large_found_7 += 1; if (p_int_16 > 750 || p_int_17 > 950 || p_int_18 > 1200 || p_int_19 > 1375 || p_int_20 > 525 || p_int_21 > 700 || p_int_22 > 700 || p_int_23 > 500 || avg_pulse.top_vp_energy > 450) {num_veto_found_7 += 1;}}
             
@@ -2608,7 +2835,7 @@ int main(int argc, char *argv[])
 
         // cout << "\n" << "Total number of Michel Tree Fills: " << write_out_counter << "\n" << endl;
 
-	    michelTree->Write();
+	    // michelTree->Write();
 
         fileOut->Close();
 
@@ -2620,9 +2847,21 @@ int main(int argc, char *argv[])
 
         // cout << "\n" << "RMS of nsTime = " << rmsValue(all_nsTime)  << endl;
 
-        // cout << "\n" << "Number of events in which Channel 15 is 'on' = " << ch15_on << endl;
+        // cout << "\n" << "Time difference between first event and last event in run: " << lasteventtime - firsteventtime << " (Run " << run_iterable << ")" << endl;
+
+        // cout << "\n" << "Number of events with peak in Event 61 DAQ channel: " << ch15_on << " (Run " << run_iterable << ")" << endl;
+
+        // cout << "\n" << "Average number of Event 61 signals per second: " << ch15_on / ((lasteventtime - firsteventtime) / pow(10, 9)) << " (Run " << run_iterable << ")" << endl;
+
+        // cout << "\n" << "Number of high light LED events: " << highLEDcounter << " (Run " << run_iterable << ")" << endl;
+
+        // cout << "\n" << "Average number of high light LED events per second: " << highLEDcounter / ((lasteventtime - firsteventtime) / pow(10, 9)) << " (Run " << run_iterable << ")" << endl;
+
+        // cout << "\n" << run_iterable << " " << Ev61TimeVal.size() << endl;
 
         ch15_on = 0;
+
+        highLEDcounter = 0;
 
         all_nsTime.clear();
 
@@ -2646,30 +2885,93 @@ int main(int argc, char *argv[])
 
         peak_pos_RMS.clear();
 
+        second_count = 1;
+
         run_counter += 1;
 
-        if (run_counter == 12) {hour12_st = run_starttime; hour12_run = run_iterable;}
+        if (run_counter == floor(0.5 * RunListLines)) {hour12_st = run_starttime; hour12_run = run_iterable;}
 
-        else if (run_counter == 24) {run_counter = 0;}
+        // else if (run_counter == 24) {run_counter = 0;}
+
+        /*TF1* func_inttemp = new TF1("func_inttemp", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))", 500, 1100);
+        double Par_temp[] = {10, 100000, 800, 150};
+        func_inttemp->SetParameters(Par_temp);
+        func_inttemp->SetParName(0, "Baseline");
+        func_inttemp->SetParName(1, "Amplitude");
+        func_inttemp->SetParName(2, "PeakCenter");
+        func_inttemp->SetParName(3, "StandardDeviation");
+        h_inttemp->Fit("func_inttemp", "R");
+        double_t pc_hl = func_inttemp->GetParameter(2);
+        h_inttemp->Reset();
+
+        HLPCFile << run_iterable << "\t" << pc_hl << endl;*/
 
         f->Close();
 
+        /*int seconds_per_run = 3598;
+
+        if (run_iterable <= 21765) {seconds_per_run = 3598;}
+
+        else {seconds_per_run = 3597;}
+
+        TH1D* h_hl_time_values = new TH1D("h_hl_time_values", "High Light LED Time Values Across Runs", seconds_per_run, 0, seconds_per_run);
+
+        for (size_t iVec = 0; iVec < HLTimeVal.size(); iVec++) {h_hl_time_values->Fill(HLTimeVal[iVec]);}
+
+        HLTimeVal.clear();
+
+        TCanvas* c_hl_time_values = new TCanvas("c_hl_time_values", "HL Times", 1200, 700);
+        // c_hl_time_values->SetLogy();
+        c_hl_time_values->cd();
+        h_hl_time_values->GetXaxis()->SetTitle("Time (sec)");
+        h_hl_time_values->GetYaxis()->SetTitle("Counts");
+        // h_hl_time_values->GetYaxis()->SetRange(0, 50);
+        h_hl_time_values->Draw();
+        c_hl_time_values->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_hl_time_values_%i.png", run_iterable));
+        // c_hl_time_values->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_hl_time_values_%i.png", run_iterable));
+        c_hl_time_values->Close();
+        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_hl_time_values.png"));
+        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_hl_time_values.png"));
+        h_hl_time_values->Reset();
+
+        TH1D* h_ev61_time_values = new TH1D("h_ev61_time_values", "Event 61 Time Values Across Runs, 4.664ms-4.687ms After HL or 12.665ms-12.688ms After LL", seconds_per_run, 0, seconds_per_run);
+
+        for (size_t iVec = 0; iVec < Ev61TimeVal.size(); iVec++) {h_ev61_time_values->Fill(Ev61TimeVal[iVec]);}
+
+        Ev61TimeVal.clear();
+
+        TCanvas* c_ev61_time_values = new TCanvas("c_ev61_time_values", "Event 61 Times", 1200, 700);
+        // c_ev61_time_values->SetLogy();
+        c_ev61_time_values->cd();
+        h_ev61_time_values->GetXaxis()->SetTitle("Time (sec)");
+        h_ev61_time_values->GetYaxis()->SetTitle("Counts");
+        // h_ev61_time_values->GetYaxis()->SetRange(0, 50);
+        h_ev61_time_values->Draw();
+        c_ev61_time_values->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61_time_values_%i.png", run_iterable));
+        // c_ev61_time_values->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61_time_values_%i.png", run_iterable));
+        c_ev61_time_values->Close();
+        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_time_values.png"));
+        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_v_time_values.png"));
+        h_ev61_time_values->Reset();*/
+
     } // Run loop
 
-    cout << "Number of HL events separated by less than 18ms, Run " << run << " = " << HL_dt_17ms_counter << "\n" << endl;
+    // cout << "\n" << "Number of Event 61 peaks in the specified four second window: " << four_sec_ev61_count << "\n" << endl;
 
-    cout << "Number of cosmic events, Run " << run << " = " << cosmic_events << "\n" << endl;          // runlist[0]
+    // cout << "Number of HL events separated by less than 18ms, Run " << run << " = " << HL_dt_17ms_counter << "\n" << endl;
 
-    cout << "Number of Michel electron events, Run " << run << " = " << hist_events << "\n" << endl;           // runlist[0]
+    // cout << "Number of cosmic events, Run " << run << " = " << cosmic_events << "\n" << endl;          // runlist[0]
 
-    cout << "Average Michel electron energy, Run " << run << " = " << tot_michel_energy * pow(hist_events, -1) << "\n" << "\n" << endl;            // runlist[0]
+    // cout << "Number of Michel electron events, Run " << run << " = " << hist_events << "\n" << endl;           // runlist[0]
+
+    // cout << "Average Michel electron energy, Run " << run << " = " << tot_michel_energy * pow(hist_events, -1) << "\n" << "\n" << endl;            // runlist[0]
 
     double avg_mich_en = tot_michel_energy * pow(hist_events, -1);
 
     // Write to the file
-    MIFile << hour12_st << "\t" << avg_mich_en << "\n";
-
     MERFile << hour12_st << "\t" << hist_events << "\n";
+    
+    MIFile << hour12_st << "\t" << avg_mich_en << "\n";
 
     cosmic_events = 0;
 
@@ -2678,13 +2980,13 @@ int main(int argc, char *argv[])
     tot_michel_energy = 0.0;
 
     // Close the file
-    MIFile.close();
-
-    MIFile.clear();
-
     MERFile.close();
 
     MERFile.clear();
+
+    MIFile.close();
+
+    MIFile.clear();
 
     MBVFile.close();
 
@@ -2706,1845 +3008,863 @@ int main(int argc, char *argv[])
 
     MBBVFile.clear();
 
+    E61File.close();
+
+    E61File.clear();
+
+    E61EFile.close();
+
+    E61EFile.clear();
+
+    HLPCFile.close();
+
+    HLPCFile.clear();
+
     /* Fill & plot histograms */
+
+    TCanvas* c_dt = new TCanvas("c_dt", "Delta-T", 1200, 900);
+    // c_dt->SetLogy();
+    c_dt->cd();
+
+    TF1* func1 = new TF1("func1", "[0]+[1]*exp(-x/[2])", 2100, 12100);
+    double Par1[] = {100, 15000, 2100};
+    func1->SetParameters(Par1);
+    func1->SetParName(0, "Baseline");
+    func1->SetParName(1, "Amplitude");
+    func1->SetParName(2, "Time Constant");
+    h_dt->Fit("func1", "R");
+    Double_t chi2_1 = func1->GetChisquare();
+
+    cout << "\n" << "Chi-square of e^x/a fit: " << chi2_1 << "\n" << endl;
+
+    // TF1* func2 = new TF1("func2", "[0]+[1]*exp(-x/2200)+[2]*exp(-x/1800)", 2100, 12100);
+    // func2->SetParNames("Baseline", "Amplitude_u+", "Amplitude_u-");
+    // func2->SetParameters(100, 15000, 15000);
+    // h_dt->Fit("func2", "R");
+    // Double_t chi2_2 = func2->GetChisquare();
+
+    // cout << "\n" << "Chi-square of e^x/2200 + e^x/1800 fit: " << chi2_2 << "\n" << endl;
+
+    /*TF1* func3 = new TF1("func3", "[0]+[1]*exp(-x/[2])+[3]*exp(-x/[4])", 2100, 12100);
+
+    double Par3[] = {100, 15000, 2200, 15000, 1800};
+    func3->SetParameters(Par3);
+    func3->SetParName(0, "Baseline");
+    func3->SetParName(1, "Amplitude_u+");
+    func3->SetParName(2, "Time Constant_u+");
+    func3->SetParName(3, "Amplitude_u-");
+    func3->SetParName(4, "Time Constant_u-");
+    h_dt->Fit("func3", "R");
+    Double_t chi2_3 = func3->GetChisquare();
+
+    cout << "\n" << "Chi-square of e^x/a + e^x/b fit: " << chi2_3 << endl;*/
+
+    h_dt->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt->GetYaxis()->SetTitle("Counts");
+    h_dt->GetYaxis()->SetRange(0, 200);
+    h_dt->GetXaxis()->SetTitleSize(0.04);
+    h_dt->GetYaxis()->SetTitleSize(0.04);
+    h_dt->SetBit(TH1::kNoTitle);
+    h_dt->SetStats(0);
+    h_dt->Draw();
+    func1->Draw("same");
+    func1->SetLineColor(2);
+    // func2->Draw("same");
+    // func2->SetLineColor(3);
+    // func3->Draw("same");
+    // func3->SetLineColor(3);
+    // TLegend *leg_dt = new TLegend(0.9, 0.65, 0.65, 0.45);
+    // leg_dt->AddEntry(func1, "e^x/a fit", "l");
+    // leg_dt->AddEntry(func2, "e^x/2200 + e^x/1800 fit", "l");
+    // leg_dt->AddEntry(func3, "e^x/a + e^x/b fit", "l");
+    // leg_dt->Draw();
+
+    Double_t param10 = func1->GetParameter(0);
+    Double_t param11 = func1->GetParameter(1);
+    Double_t param12 = func1->GetParameter(2);
+
+    Double_t error10 = func1->GetParError(0);
+    Double_t error11 = func1->GetParError(1);
+    Double_t error12 = func1->GetParError(2);
+
+    TLatex *lat_dt_1 = new TLatex(0.3, 0.7, Form("Baseline = %.2f #pm %.2f", param10, error10));
+    lat_dt_1->SetNDC();
+    lat_dt_1->SetTextColor(1);
+    lat_dt_1->SetTextSize(0.04);
+    // lat_dt_1->Draw();
+
+    TLatex *lat_dt_2 = new TLatex(0.3, 0.65, Form("Amplitude = %.2f #pm %.2f", param11, error11));
+    lat_dt_2->SetNDC();
+    lat_dt_2->SetTextColor(1);
+    lat_dt_2->SetTextSize(0.04);
+    // lat_dt_2->Draw();
+
+    TLatex *lat_dt_3 = new TLatex(0.3, 0.7, Form("Time Constant (ns) = %.2f #pm %.2f", param12, error12));
+    lat_dt_3->SetNDC();
+    lat_dt_3->SetTextColor(1);
+    lat_dt_3->SetTextSize(0.04);
+    lat_dt_3->Draw();
     
-    if (run != 11241 && run != 12636) {
-
-        TCanvas* c_dt = new TCanvas("c_dt", "Delta-T", 900, 700);
-        // c_dt->SetLogy();
-        c_dt->cd();
-
-        TF1* func1 = new TF1("func1", "[0]+[1]*exp(-x/[2])", 2100, 12100);
-        double Par1[] = {100, 15000, 2100};
-        func1->SetParameters(Par1);
-        func1->SetParName(0, "Baseline");
-        func1->SetParName(1, "Amplitude");
-        func1->SetParName(2, "Time Constant");
-        h_dt->Fit("func1", "R");
-        Double_t chi2_1 = func1->GetChisquare();
-
-        cout << "\n" << "Chi-square of e^x/a fit: " << chi2_1 << "\n" << endl;
-
-        // TF1* func2 = new TF1("func2", "[0]+[1]*exp(-x/2200)+[2]*exp(-x/1800)", 2100, 12100);
-        // func2->SetParNames("Baseline", "Amplitude_u+", "Amplitude_u-");
-        // func2->SetParameters(100, 15000, 15000);
-        // h_dt->Fit("func2", "R");
-        // Double_t chi2_2 = func2->GetChisquare();
-
-        // cout << "\n" << "Chi-square of e^x/2200 + e^x/1800 fit: " << chi2_2 << "\n" << endl;
-
-        /*TF1* func3 = new TF1("func3", "[0]+[1]*exp(-x/[2])+[3]*exp(-x/[4])", 2100, 12100);
-
-        double Par3[] = {100, 15000, 2200, 15000, 1800};
-        func3->SetParameters(Par3);
-        func3->SetParName(0, "Baseline");
-        func3->SetParName(1, "Amplitude_u+");
-        func3->SetParName(2, "Time Constant_u+");
-        func3->SetParName(3, "Amplitude_u-");
-        func3->SetParName(4, "Time Constant_u-");
-        h_dt->Fit("func3", "R");
-        Double_t chi2_3 = func3->GetChisquare();
-
-        cout << "\n" << "Chi-square of e^x/a + e^x/b fit: " << chi2_3 << endl;*/
-
-        h_dt->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt->GetYaxis()->SetTitle("Counts");
-        h_dt->GetYaxis()->SetRange(0, 200);
-        h_dt->Draw();
-        func1->Draw("same");
-        func1->SetLineColor(2);
-        // func2->Draw("same");
-        // func2->SetLineColor(3);
-        // func3->Draw("same");
-        // func3->SetLineColor(3);
-        // TLegend *leg_dt = new TLegend(0.9, 0.65, 0.65, 0.45);
-        // leg_dt->AddEntry(func1, "e^x/a fit", "l");
-        // leg_dt->AddEntry(func2, "e^x/2200 + e^x/1800 fit", "l");
-        // leg_dt->AddEntry(func3, "e^x/a + e^x/b fit", "l");
-        // leg_dt->Draw();
-
-        Double_t param10 = func1->GetParameter(0);
-        Double_t param11 = func1->GetParameter(1);
-        Double_t param12 = func1->GetParameter(2);
-
-        Double_t error10 = func1->GetParError(0);
-        Double_t error11 = func1->GetParError(1);
-        Double_t error12 = func1->GetParError(2);
-
-        TLatex *lat_dt_1 = new TLatex(0.3, 0.7, Form("Baseline = %.2f #pm %.2f", param10, error10));
-        lat_dt_1->SetNDC();
-        lat_dt_1->SetTextColor(1);
-        lat_dt_1->SetTextSize(0.04);
-        lat_dt_1->Draw();
-
-        TLatex *lat_dt_2 = new TLatex(0.3, 0.65, Form("Amplitude = %.2f #pm %.2f", param11, error11));
-        lat_dt_2->SetNDC();
-        lat_dt_2->SetTextColor(1);
-        lat_dt_2->SetTextSize(0.04);
-        lat_dt_2->Draw();
-
-        TLatex *lat_dt_3 = new TLatex(0.3, 0.6, Form("Time Constant (ns) = %.2f #pm %.2f", param12, error12));
-        lat_dt_3->SetNDC();
-        lat_dt_3->SetTextColor(1);
-        lat_dt_3->SetTextSize(0.04);
-        lat_dt_3->Draw();
-        
-        /*TLatex *lat_dt_9 = new TLatex(0.3, 0.7, Form("e^x/a chi-square = %.2f", chi2_1));
-        lat_dt_9->SetNDC();
-        lat_dt_9->SetTextColor(1);
-        lat_dt_9->SetTextSize(0.02);
-        lat_dt_9->Draw();
-
-        Double_t param30 = func3->GetParameter(0);
-        Double_t param31 = func3->GetParameter(1);
-        Double_t param32 = func3->GetParameter(2);
-        Double_t param33 = func3->GetParameter(3);
-        Double_t param34 = func3->GetParameter(4);
-
-        TLatex *lat_dt_4 = new TLatex(0.3, 0.65, Form("e^x/a + e^x/b baseline = %.2f", param30));
-        lat_dt_4->SetNDC();
-        lat_dt_4->SetTextColor(1);
-        lat_dt_4->SetTextSize(0.02);
-        lat_dt_4->Draw();
-
-        TLatex *lat_dt_5 = new TLatex(0.3, 0.6, Form("e^x/a + e^x/b u+ amplitude = %.2f", param31));
-        lat_dt_5->SetNDC();
-        lat_dt_5->SetTextColor(1);
-        lat_dt_5->SetTextSize(0.02);
-        lat_dt_5->Draw();
-
-        TLatex *lat_dt_6 = new TLatex(0.3, 0.55, Form("e^x/a + e^x/b u+ time constant (ns) = %.2f", param32));
-        lat_dt_6->SetNDC();
-        lat_dt_6->SetTextColor(1);
-        lat_dt_6->SetTextSize(0.02);
-        lat_dt_6->Draw();
-
-        TLatex *lat_dt_7 = new TLatex(0.3, 0.5, Form("e^x/a + e^x/b u- amplitude = %.2f", param33));
-        lat_dt_7->SetNDC();
-        lat_dt_7->SetTextColor(1);
-        lat_dt_7->SetTextSize(0.02);
-        lat_dt_7->Draw();
-
-        TLatex *lat_dt_8 = new TLatex(0.3, 0.45, Form("e^x/a + e^x/b u- time constant (ns) = %.2f", param34));
-        lat_dt_8->SetNDC();
-        lat_dt_8->SetTextColor(1);
-        lat_dt_8->SetTextSize(0.02);
-        lat_dt_8->Draw();
-
-        TLatex *lat_dt_10 = new TLatex(0.3, 0.4, Form("e^x/a + e^x/b chi-square = %.2f", chi2_3));
-        lat_dt_10->SetNDC();
-        lat_dt_10->SetTextColor(1);
-        lat_dt_10->SetTextSize(0.02);
-        lat_dt_10->Draw();*/
-
-        c_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_%i.png", run));
-        c_dt->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_dt.png"));
-        h_dt->Reset();
-
-        h_intmuons->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmuons->GetYaxis()->SetTitle("Counts");
-        h_intmuons->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmuons_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmuons.png"));
-        h_intmuons->Reset();
-
-        TCanvas* c_intmichels = new TCanvas("c_intmichels", "Michel Electron Integral Values", 1200, 700);
-        // c_intmichels->SetLogy();
-        c_intmichels->cd();
-
-        TF1* func_intmichels = new TF1("func_intmichels", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))", 60, 280);
-        double par_michels[] = {500, 4000, 150, 100};
-        func_intmichels->SetParameters(par_michels);
-        func_intmichels->SetParName(0, "Baseline");
-        func_intmichels->SetParName(1, "Amplitude");
-        func_intmichels->SetParName(2, "PeakCenter");
-        func_intmichels->SetParName(3, "StandardDeviation");
-        h_intmichels->Fit("func_intmichels", "R");
-        double_t am_michels = func_intmichels->GetParameter(1);
-        double_t pc_michels = func_intmichels->GetParameter(2);
-
-        h_intmichels->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels->GetYaxis()->SetTitle("Counts");
-        h_intmichels->Draw();
-        TLatex *lat_intmichels_1 = new TLatex(0.6, 0.7, Form("Average Michel energy = %.2f", avg_mich_en));
-        lat_intmichels_1->SetNDC();
-        lat_intmichels_1->SetTextColor(1);
-        lat_intmichels_1->SetTextSize(0.04);
-        lat_intmichels_1->Draw();
-        c_intmichels->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_%i.png", run));
-        // c_intmichels->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_intmichels.png");
-        c_intmichels->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels.png"));
-        // h_intmichels->Print("all");
-        h_intmichels->Reset();
-
-        MIAFile << hour12_st << "\t" << am_michels << endl;
-        MIPFile << hour12_st << "\t" << pc_michels << endl;
-
-        TCanvas* c_dt_v_intmichels = new TCanvas("c_dt_v_intmichels", "Event 61 Detector dt vs Integral Value", 1200, 700);
-        // c_dt_v_intmichels->SetLogy();
-        c_dt_v_intmichels->cd();
-        h_dt_v_intmichels->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_v_intmichels->GetYaxis()->SetTitle("Integral (Ph.e.)");
-        h_dt_v_intmichels->SetMarkerStyle(7);
-        h_dt_v_intmichels->Draw();
-        c_dt_v_intmichels->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_v_intmichels_%i.png", run));
-        // c_dt_v_intmichels->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_v_intmichels.png");
-        c_dt_v_intmichels->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_v_intmichels.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_dt_v_intmichels.png"));
-        h_dt_v_intmichels->Reset();
-
-        h_intcosmics->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intcosmics->GetYaxis()->SetTitle("Counts");
-        h_intcosmics->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intcosmics_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intcosmics.png"));
-        // h_intcosmics->Print("all");
-        h_intcosmics->Reset();
-
-        TCanvas* c_muon_pmt_sipm_dt = new TCanvas("c_muon_pmt_sipm_dt", "Muon PMT vs SiPM dt", 1200, 700);
-        // c_muon_pmt_sipm_dt->SetLogy();
-        c_muon_pmt_sipm_dt->cd();
-
-        TF1* func_pmt_sipm_dt = new TF1("func_pmt_sipm_dt", "[0]+[1]*exp(-1*pow((x-[2]),2)/(2*pow([3],2)))", -40, 60);
-        double par_pmt_sipm_dt[] = {1000, 6000000, 10, 20};
-        func_pmt_sipm_dt->SetParameters(par_pmt_sipm_dt);
-        func_pmt_sipm_dt->SetParName(0, "Baseline");
-        func_pmt_sipm_dt->SetParName(1, "Amplitude");
-        func_pmt_sipm_dt->SetParName(2, "PeakCenter");
-        func_pmt_sipm_dt->SetParName(3, "StandardDeviation");
-        h_muon_pmt_sipm_dt->Fit("func_pmt_sipm_dt", "R");
-        double_t dt_center = func_pmt_sipm_dt->GetParameter(2);
-        double_t dt_sigma = func_pmt_sipm_dt->GetParameter(3);
-
-        h_muon_pmt_sipm_dt->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_muon_pmt_sipm_dt->GetYaxis()->SetTitle("Counts");
-        // h_muon_pmt_sipm_dt->GetYaxis()->SetRange(0, 50);
-        h_muon_pmt_sipm_dt->Draw();
-        TLatex *lat_pmt_sipm_dt = new TLatex(0.6, 0.7, Form("Peak Center #pm Sigma = %.2f #pm %.2f", dt_center, dt_sigma));
-        lat_pmt_sipm_dt->SetNDC();
-        lat_pmt_sipm_dt->SetTextColor(1);
-        lat_pmt_sipm_dt->SetTextSize(0.04);
-        lat_pmt_sipm_dt->Draw();
-        func_pmt_sipm_dt->Draw("same");
-        func_pmt_sipm_dt->SetLineColor(2);
-        
-        c_muon_pmt_sipm_dt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_muon_pmt_sipm_dt.png");
-        // c_muon_pmt_sipm_dt->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_muon_pmt_sipm_dt.png");
-        c_muon_pmt_sipm_dt->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_muon_pmt_sipm_dt.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_muon_pmt_sipm_dt.png"));
-        h_muon_pmt_sipm_dt->Reset();
-
-        TCanvas* c_only_one_sipm = new TCanvas("c_only_one_sipm", "Only One SiPM Integrals", 1200, 700);
-        c_only_one_sipm->SetLogy();
-        c_only_one_sipm->cd();
-        h_only_one_sipm->GetXaxis()->SetTitle("Integral (ADC)");
-        h_only_one_sipm->GetYaxis()->SetTitle("Counts");
-        // h_only_one_sipm->GetYaxis()->SetRange(0, 50);
-        h_only_one_sipm->Draw();
-        c_only_one_sipm->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_only_one_sipm.png");
-        // c_only_one_sipm->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_only_one_sipm.png");
-        c_only_one_sipm->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_only_one_sipm.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_only_one_sipm.png"));
-        h_only_one_sipm->Reset();
-        
-        TCanvas* c_34detint = new TCanvas("c_34detint", "Distribution of All tB34 Det. Integral Values", 1200, 700);
-        c_34detint->SetLogy();
-        c_34detint->cd();
-        h_34detint->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_34detint->GetYaxis()->SetTitle("Counts");
-        h_34detint->Draw();
-        c_34detint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_34detint.png");
-        // c_34detint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_34detint.png");
-        c_34detint->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34detint.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34detint.png"));
-        h_34detint->Reset();
-        // delete TCanvas c_34detint;           // Every time you have "new", need "delete" after
-
-        TCanvas* c_34vpint = new TCanvas("c_34vpint", "Distribution of All tB34 VP Integral Values", 1200, 700);
-        c_34vpint->SetLogy();
-        c_34vpint->cd();
-        h_34vpint->GetXaxis()->SetTitle("Integral (ADC)");
-        h_34vpint->GetYaxis()->SetTitle("Counts");
-        h_34vpint->Draw();
-        c_34vpint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_34vpint.png");
-        // c_34vpint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_34vpint.png");
-        c_34vpint->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34vpint.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34vpint.png"));
-        h_34vpint->Reset();
-
-        TCanvas* c_slice_vpintavg = new TCanvas("c_slice_vpintavg", "Distribution of Averaged Veto Panel Integral Values", 1200, 700);
-        c_slice_vpintavg->SetLogy();
-        c_slice_vpintavg->cd();
-        h_slice_vpintavg->GetXaxis()->SetTitle("Integral (ADC)");
-        h_slice_vpintavg->GetYaxis()->SetTitle("Counts");
-        h_slice_vpintavg->Draw();
-        c_slice_vpintavg->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_slice_vpintavg.png");
-        // c_slice_vpintavg->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_slice_vpintavg.png");
-        c_slice_vpintavg->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_slice_vpintavg.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_slice_vpintavg.png"));
-        h_slice_vpintavg->Reset();
-
-        TCanvas* c_dt_61_16 = new TCanvas("c_dt_61_16", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_16->SetLogy();
-        c_dt_61_16->cd();
-        h_dt_61_16->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_16->GetYaxis()->SetTitle("Counts");
-        h_dt_61_16->Draw();
-        c_dt_61_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_16.png");
-        // c_dt_61_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_16.png");
-        c_dt_61_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_16.png"));
-        h_dt_61_16->Reset();
-
-        TCanvas* c_dt_61_17 = new TCanvas("c_dt_61_17", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_17->SetLogy();
-        c_dt_61_17->cd();
-        h_dt_61_17->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_17->GetYaxis()->SetTitle("Counts");
-        h_dt_61_17->Draw();
-        c_dt_61_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_17.png");
-        // c_dt_61_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_17.png");
-        c_dt_61_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_17.png"));
-        h_dt_61_17->Reset();
-
-        TCanvas* c_dt_61_18 = new TCanvas("c_dt_61_18", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_18->SetLogy();
-        c_dt_61_18->cd();
-        h_dt_61_18->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_18->GetYaxis()->SetTitle("Counts");
-        h_dt_61_18->Draw();
-        c_dt_61_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_18.png");
-        // c_dt_61_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_18.png");
-        c_dt_61_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_18.png"));
-        h_dt_61_18->Reset();
-
-        TCanvas* c_dt_61_19 = new TCanvas("c_dt_61_19", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_19->SetLogy();
-        c_dt_61_19->cd();
-        h_dt_61_19->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_19->GetYaxis()->SetTitle("Counts");
-        h_dt_61_19->Draw();
-        c_dt_61_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_19.png");
-        // c_dt_61_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_19.png");
-        c_dt_61_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_19.png"));
-        h_dt_61_19->Reset();
-
-        TCanvas* c_dt_61_20 = new TCanvas("c_dt_61_20", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_20->SetLogy();
-        c_dt_61_20->cd();
-        h_dt_61_20->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_20->GetYaxis()->SetTitle("Counts");
-        h_dt_61_20->Draw();
-        c_dt_61_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_20.png");
-        // c_dt_61_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_20.png");
-        c_dt_61_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_20.png"));
-        h_dt_61_20->Reset();
-
-        TCanvas* c_dt_61_21 = new TCanvas("c_dt_61_21", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_21->SetLogy();
-        c_dt_61_21->cd();
-        h_dt_61_21->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_21->GetYaxis()->SetTitle("Counts");
-        h_dt_61_21->Draw();
-        c_dt_61_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_21.png");
-        // c_dt_61_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_21.png");
-        c_dt_61_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_21.png"));
-        h_dt_61_21->Reset();
-
-        TCanvas* c_dt_61_22 = new TCanvas("c_dt_61_22", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_22->SetLogy();
-        c_dt_61_22->cd();
-        h_dt_61_22->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_22->GetYaxis()->SetTitle("Counts");
-        h_dt_61_22->Draw();
-        c_dt_61_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_22.png");
-        // c_dt_61_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_22.png");
-        c_dt_61_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_22.png"));
-        h_dt_61_22->Reset();
-
-        TCanvas* c_dt_61_23 = new TCanvas("c_dt_61_23", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_23->SetLogy();
-        c_dt_61_23->cd();
-        h_dt_61_23->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_23->GetYaxis()->SetTitle("Counts");
-        h_dt_61_23->Draw();
-        c_dt_61_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_23.png");
-        // c_dt_61_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_23.png");
-        c_dt_61_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_23.png"));
-        h_dt_61_23->Reset();
-
-        TCanvas* c_dt_61_top = new TCanvas("c_dt_61_top", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_top->SetLogy();
-        c_dt_61_top->cd();
-        h_dt_61_top->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_top->GetYaxis()->SetTitle("Counts");
-        h_dt_61_top->Draw();
-        c_dt_61_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_dt_61_top.png");
-        // c_dt_61_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_dt_61_top.png");
-        c_dt_61_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_top.png"));
-        h_dt_61_top->Reset();
-
-        TCanvas* c_vpint_16 = new TCanvas("c_vpint_16", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_16->SetLogy();
-        c_vpint_16->cd();
-        h_vpint_16->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_16->GetYaxis()->SetTitle("Counts");
-        h_vpint_16->Draw();
-        c_vpint_16->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_16_%i.png", run));
-        // c_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_16.png");
-        c_vpint_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_16.png"));
-        h_vpint_16->Reset();
-
-        TCanvas* c_vpint_17 = new TCanvas("c_vpint_17", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_17->SetLogy();
-        c_vpint_17->cd();
-        h_vpint_17->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_17->GetYaxis()->SetTitle("Counts");
-        h_vpint_17->Draw();
-        c_vpint_17->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_17_%i.png", run));
-        // c_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_17.png");
-        c_vpint_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_17.png"));
-        h_vpint_17->Reset();
-
-        TCanvas* c_vpint_18 = new TCanvas("c_vpint_18", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_18->SetLogy();
-        c_vpint_18->cd();
-        h_vpint_18->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_18->GetYaxis()->SetTitle("Counts");
-        h_vpint_18->Draw();
-        c_vpint_18->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_18_%i.png", run));
-        // c_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_18.png");
-        c_vpint_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_18.png"));
-        h_vpint_18->Reset();
-
-        TCanvas* c_vpint_19 = new TCanvas("c_vpint_19", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_19->SetLogy();
-        c_vpint_19->cd();
-        h_vpint_19->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_19->GetYaxis()->SetTitle("Counts");
-        h_vpint_19->Draw();
-        c_vpint_19->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_19_%i.png", run));
-        // c_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_19.png");
-        c_vpint_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_19.png"));
-        h_vpint_19->Reset();
-
-        TCanvas* c_vpint_20 = new TCanvas("c_vpint_20", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_20->SetLogy();
-        c_vpint_20->cd();
-        h_vpint_20->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_20->GetYaxis()->SetTitle("Counts");
-        h_vpint_20->Draw();
-        c_vpint_20->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_20_%i.png", run));
-        // c_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_20.png");
-        c_vpint_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_20.png"));
-        h_vpint_20->Reset();
-
-        TCanvas* c_vpint_21 = new TCanvas("c_vpint_21", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_21->SetLogy();
-        c_vpint_21->cd();
-        h_vpint_21->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_21->GetYaxis()->SetTitle("Counts");
-        h_vpint_21->Draw();
-        c_vpint_21->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_21_%i.png", run));
-        // c_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_21.png");
-        c_vpint_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_21.png"));
-        h_vpint_21->Reset();
-
-        TCanvas* c_vpint_22 = new TCanvas("c_vpint_22", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_22->SetLogy();
-        c_vpint_22->cd();
-        h_vpint_22->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_22->GetYaxis()->SetTitle("Counts");
-        h_vpint_22->Draw();
-        c_vpint_22->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_22_%i.png", run));
-        // c_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_22.png");
-        c_vpint_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_22.png"));
-        h_vpint_22->Reset();
-
-        TCanvas* c_vpint_23 = new TCanvas("c_vpint_23", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_23->SetLogy();
-        c_vpint_23->cd();
-        h_vpint_23->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_23->GetYaxis()->SetTitle("Counts");
-        h_vpint_23->Draw();
-        c_vpint_23->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_23_%i.png", run));
-        // c_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_23.png");
-        c_vpint_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_23.png"));
-        h_vpint_23->Reset();
-
-        TCanvas* c_vpint_top = new TCanvas("c_vpint_top", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_top->SetLogy();
-        c_vpint_top->cd();
-        h_vpint_top->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_top->GetYaxis()->SetTitle("Counts");
-        h_vpint_top->Draw();
-        c_vpint_top->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_vpint_top_%i.png", run));
-        // c_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_vpint_top.png");
-        c_vpint_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_top.png"));
-        h_vpint_top->Reset();
-
-        TCanvas* c_detint_vs_vpint_16 = new TCanvas("c_detint_vs_vpint_16", "SiPM 1 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_16->SetLogy();
-        // c_detint_vs_vpint_16->SetLogx();
-        c_detint_vs_vpint_16->cd();
-        h_detint_vs_vpint_16->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_16->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_16->Draw();
-        c_detint_vs_vpint_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_16.png");
-        // c_detint_vs_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_16.png");
-        c_detint_vs_vpint_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_16.png"));
-        h_detint_vs_vpint_16->Reset();
-
-        TCanvas* c_detint_vs_vpint_17 = new TCanvas("c_detint_vs_vpint_17", "SiPM 2 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_17->SetLogy();
-        // c_detint_vs_vpint_17->SetLogx();
-        c_detint_vs_vpint_17->cd();
-        h_detint_vs_vpint_17->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_17->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_17->Draw();
-        c_detint_vs_vpint_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_17.png");
-        // c_detint_vs_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_17.png");
-        c_detint_vs_vpint_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_17.png"));
-        h_detint_vs_vpint_17->Reset();
-
-        TCanvas* c_detint_vs_vpint_18 = new TCanvas("c_detint_vs_vpint_18", "SiPM 3 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_18->SetLogy();
-        // c_detint_vs_vpint_18->SetLogx();
-        c_detint_vs_vpint_18->cd();
-        h_detint_vs_vpint_18->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_18->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_18->Draw();
-        c_detint_vs_vpint_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_18.png");
-        // c_detint_vs_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_18.png");
-        c_detint_vs_vpint_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_18.png"));
-        h_detint_vs_vpint_18->Reset();
-
-        TCanvas* c_detint_vs_vpint_19 = new TCanvas("c_detint_vs_vpint_19", "SiPM 4 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_19->SetLogy();
-        // c_detint_vs_vpint_19->SetLogx();
-        c_detint_vs_vpint_19->cd();
-        h_detint_vs_vpint_19->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_19->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_19->Draw();
-        c_detint_vs_vpint_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_19.png");
-        // c_detint_vs_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_19.png");
-        c_detint_vs_vpint_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_19.png"));
-        h_detint_vs_vpint_19->Reset();
-
-        TCanvas* c_detint_vs_vpint_20 = new TCanvas("c_detint_vs_vpint_20", "SiPM 5 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_20->SetLogy();
-        // c_detint_vs_vpint_20->SetLogx();
-        c_detint_vs_vpint_20->cd();
-        h_detint_vs_vpint_20->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_20->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_20->Draw();
-        c_detint_vs_vpint_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_20.png");
-        // c_detint_vs_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_20.png");
-        c_detint_vs_vpint_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_20.png"));
-        h_detint_vs_vpint_20->Reset();
-
-        TCanvas* c_detint_vs_vpint_21 = new TCanvas("c_detint_vs_vpint_21", "SiPM 6 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_21->SetLogy();
-        // c_detint_vs_vpint_21->SetLogx();
-        c_detint_vs_vpint_21->cd();
-        h_detint_vs_vpint_21->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_21->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_21->Draw();
-        c_detint_vs_vpint_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_21.png");
-        // c_detint_vs_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_21.png");
-        c_detint_vs_vpint_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_21.png"));
-        h_detint_vs_vpint_21->Reset();
-
-        TCanvas* c_detint_vs_vpint_22 = new TCanvas("c_detint_vs_vpint_22", "SiPM 7 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_22->SetLogy();
-        // c_detint_vs_vpint_22->SetLogx();
-        c_detint_vs_vpint_22->cd();
-        h_detint_vs_vpint_22->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_22->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_22->Draw();
-        c_detint_vs_vpint_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_22.png");
-        // c_detint_vs_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_22.png");
-        c_detint_vs_vpint_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_22.png"));
-        h_detint_vs_vpint_22->Reset();
-
-        TCanvas* c_detint_vs_vpint_23 = new TCanvas("c_detint_vs_vpint_23", "SiPM 8 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_23->SetLogy();
-        // c_detint_vs_vpint_23->SetLogx();
-        c_detint_vs_vpint_23->cd();
-        h_detint_vs_vpint_23->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_23->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_23->Draw();
-        c_detint_vs_vpint_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_23.png");
-        // c_detint_vs_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_23.png");
-        c_detint_vs_vpint_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_23.png"));
-        h_detint_vs_vpint_23->Reset();
-
-        TCanvas* c_detint_vs_vpint_top = new TCanvas("c_detint_vs_vpint_top", "Top SiPM & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_top->SetLogy();
-        // c_detint_vs_vpint_top->SetLogx();
-        c_detint_vs_vpint_top->cd();
-        h_detint_vs_vpint_top->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_top->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_top->Draw();
-        c_detint_vs_vpint_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_top.png");
-        // c_detint_vs_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots7894/h_detint_vs_vpint_top.png");
-        c_detint_vs_vpint_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_top.png"));
-        h_detint_vs_vpint_top->Reset();
-
-        TCanvas* c_tB = new TCanvas("c_tB", "TriggerBits Distribution", 1200, 700);
-        c_tB->SetLogy();
-        c_tB->cd();
-        h_tB->GetXaxis()->SetTitle("triggerBits Value");
-        h_tB->GetYaxis()->SetTitle("Counts");
-        h_tB->Draw();
-        c_tB->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_tB_%i.png", run));
-        c_tB->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_tB.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_tB.png"));
-        h_tB->Reset();
-
-        TCanvas* c_blM_pmt = new TCanvas("c_blM_pmt", "PMT baselineMean Distribution", 1200, 700);
-        c_blM_pmt->SetLogy();
-        c_blM_pmt->cd();
-        h_blM_pmt->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_pmt->GetYaxis()->SetTitle("Counts");
-        h_blM_pmt->Draw();
-        c_blM_pmt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_blM_pmt.png");
-        c_blM_pmt->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_pmt.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_blM_pmt.png"));
-        h_blM_pmt->Reset();
-
-        TCanvas* c_blM_vp = new TCanvas("c_blM_vp", "SiPM baselineMean Distribution", 1200, 700);
-        c_blM_vp->SetLogy();
-        c_blM_vp->cd();
-        h_blM_vp->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_vp->GetYaxis()->SetTitle("Counts");
-        h_blM_vp->Draw();
-        c_blM_vp->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_blM_vp.png");
-        c_blM_vp->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_vp.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_blM_vp.png"));
-        h_blM_vp->Reset();
-
-        TCanvas* c_blM_ev61 = new TCanvas("c_blM_ev61", "Event 61 baselineMean Distribution", 1200, 700);
-        c_blM_ev61->SetLogy();
-        c_blM_ev61->cd();
-        h_blM_ev61->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_ev61->GetYaxis()->SetTitle("Counts");
-        h_blM_ev61->Draw();
-        c_blM_ev61->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_blM_ev61.png");
-        c_blM_ev61->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_ev61.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_blM_ev61.png"));
-        h_blM_ev61->Reset();
-
-        TCanvas* c_intev61 = new TCanvas("c_intev61", "Distribution of Event 61 Integral Values", 1200, 700);
-        c_intev61->SetLogy();
-        c_intev61->cd();
-        h_intev61->GetXaxis()->SetTitle("Integral (ADC)");
-        h_intev61->GetYaxis()->SetTitle("Counts");
-        h_intev61->Draw();
-        c_intev61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intev61_%i.png", run));
-        c_intev61->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intev61.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intev61.png"));
-        h_intev61->Reset();
-
-        h_intmichels_PMT0->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT0->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT0->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT0_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT0.png"));
-        h_intmichels_PMT0->Reset();
-
-        h_intmichels_PMT1->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT1->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT1->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT1_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT1.png"));
-        h_intmichels_PMT1->Reset();
-
-        h_intmichels_PMT2->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT2->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT2->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT2_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT2.png"));
-        h_intmichels_PMT2->Reset();
-
-        h_intmichels_PMT3->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT3->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT3->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT3_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT3.png"));
-        h_intmichels_PMT3->Reset();
-
-        h_intmichels_PMT4->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT4->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT4->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT4_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT4.png"));
-        h_intmichels_PMT4->Reset();
-
-        h_intmichels_PMT5->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT5->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT5->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT5_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT5.png"));
-        h_intmichels_PMT5->Reset();
-
-        h_intmichels_PMT6->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT6->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT6->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT6_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT6.png"));
-        h_intmichels_PMT6->Reset();
-
-        h_intmichels_PMT7->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT7->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT7->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT7_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT7.png"));
-        h_intmichels_PMT7->Reset();
-
-        h_intmichels_PMT8->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT8->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT8->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT8_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT8.png"));
-        h_intmichels_PMT8->Reset();
-
-        h_intmichels_PMT9->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT9->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT9->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT9_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT9.png"));
-        h_intmichels_PMT9->Reset();
-
-        h_intmichels_PMT10->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT10->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT10->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT10_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT10.png"));
-        h_intmichels_PMT10->Reset();
-
-        h_intmichels_PMT11->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels_PMT11->GetYaxis()->SetTitle("Counts");
-        h_intmichels_PMT11->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intmichels_PMT11_%i.png", run));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intmichels_PMT11.png"));
-        h_intmichels_PMT11->Reset();
-
-    }
-
-    if (run == 11241) {
-
-        TCanvas* c_dt = new TCanvas("c_dt", "Delta-T", 900, 700);
-        // c_dt->SetLogy();
-        c_dt->cd();
-
-        TF1* func1 = new TF1("func1", "[0]+[1]*exp(-x/[2])", 2100, 12100);
-        func1->SetParNames("Baseline", "Amplitude", "Time Constant");
-        func1->SetParameters(100, 15000, 2100);
-        h_dt->Fit("func1", "R");
-        Double_t chi2_1 = func1->GetChisquare();
-
-        cout << "\n" << "Chi-square of e^x/a fit: " << chi2_1 << "\n" << endl;
-
-        // TF1* func2 = new TF1("func2", "[0]+[1]*exp(-x/2200)+[2]*exp(-x/1800)", 2100, 12100);
-        // func2->SetParNames("Baseline", "Amplitude_u+", "Amplitude_u-");
-        // func2->SetParameters(100, 15000, 15000);
-        // h_dt->Fit("func2", "R");
-        // Double_t chi2_2 = func2->GetChisquare();
-
-        // cout << "\n" << "Chi-square of e^x/2200 + e^x/1800 fit: " << chi2_2 << "\n" << endl;
-
-        TF1* func3 = new TF1("func3", "[0]+[1]*exp(-x/[2])+[3]*exp(-x/[4])", 2100, 12100);
-        func3->SetParNames("Baseline", "Amplitude_u+", "Time Constant_u+", "Amplitude_u-", "Time Constant_u-");
-        func3->SetParameters(100, 15000, 2200, 15000, 1800);
-        h_dt->Fit("func3", "R");
-        Double_t chi2_3 = func3->GetChisquare();
-
-        cout << "\n" << "Chi-square of e^x/a + e^x/b fit: " << chi2_3 << endl;
-
-        h_dt->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt->GetYaxis()->SetTitle("Counts");
-        h_dt->GetYaxis()->SetRange(0, 200);
-        h_dt->Draw();
-        func1->Draw("same");
-        func1->SetLineColor(2);
-        // func2->Draw("same");
-        // func2->SetLineColor(3);
-        func3->Draw("same");
-        func3->SetLineColor(3);
-        TLegend *leg_dt = new TLegend(0.9, 0.65, 0.65, 0.45);
-        leg_dt->AddEntry(func1, "e^x/a fit", "l");
-        // leg_dt->AddEntry(func2, "e^x/2200 + e^x/1800 fit", "l");
-        leg_dt->AddEntry(func3, "e^x/a + e^x/b fit", "l");
-        leg_dt->Draw();
-        c_dt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt.png");
-        c_dt->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_dt.png"));
-        h_dt->Reset();
-
-        h_intmuons->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmuons->GetYaxis()->SetTitle("Counts");
-        h_intmuons->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_intmuons.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_intmuons.png"));
-        h_intmuons->Reset();
-
-        h_intmichels->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels->GetYaxis()->SetTitle("Counts");
-        h_intmichels->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_intmichels.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_intmichels.png"));
-        // h_intmichels->Print("all");
-        h_intmichels->Reset();
-
-        h_intcosmics->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intcosmics->GetYaxis()->SetTitle("Counts");
-        h_intcosmics->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_intcosmics.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_intcosmics.png"));
-        // h_intcosmics->Print("all");
-        h_intcosmics->Reset();
-
-        TCanvas* c_34detint = new TCanvas("c_34detint", "Distribution of All tB34 Det. Integral Values", 1200, 700);
-        c_34detint->SetLogy();
-        c_34detint->cd();
-        h_34detint->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_34detint->GetYaxis()->SetTitle("Counts");
-        h_34detint->Draw();
-        c_34detint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_34detint.png");
-        // c_34detint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_34detint.png");
-        c_34detint->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34detint.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34detint.png"));
-        h_34detint->Reset();
-
-        TCanvas* c_34vpint = new TCanvas("c_34vpint", "Distribution of All tB34 VP Integral Values", 1200, 700);
-        c_34vpint->SetLogy();
-        c_34vpint->cd();
-        h_34vpint->GetXaxis()->SetTitle("Integral (ADC)");
-        h_34vpint->GetYaxis()->SetTitle("Counts");
-        h_34vpint->Draw();
-        c_34vpint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_34vpint.png");
-        // c_34vpint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_34vpint.png");
-        c_34vpint->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34vpint.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34vpint.png"));
-        h_34vpint->Reset();
-
-        TCanvas* c_slice_vpintavg = new TCanvas("c_slice_vpintavg", "Distribution of Averaged Veto Panel Integral Values", 1200, 700);
-        c_slice_vpintavg->SetLogy();
-        c_slice_vpintavg->cd();
-        h_slice_vpintavg->GetXaxis()->SetTitle("Integral (ADC)");
-        h_slice_vpintavg->GetYaxis()->SetTitle("Counts");
-        h_slice_vpintavg->Draw();
-        c_slice_vpintavg->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_slice_vpintavg.png");
-        // c_slice_vpintavg->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_slice_vpintavg.png");
-        c_slice_vpintavg->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_slice_vpintavg.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_slice_vpintavg.png"));
-        h_slice_vpintavg->Reset();
-
-        TCanvas* c_dt_61_16 = new TCanvas("c_dt_61_16", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_16->SetLogy();
-        c_dt_61_16->cd();
-        h_dt_61_16->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_16->GetYaxis()->SetTitle("Counts");
-        h_dt_61_16->Draw();
-        c_dt_61_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_16.png");
-        // c_dt_61_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_16.png");
-        c_dt_61_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_16.png"));
-        h_dt_61_16->Reset();
-
-        TCanvas* c_dt_61_17 = new TCanvas("c_dt_61_17", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_17->SetLogy();
-        c_dt_61_17->cd();
-        h_dt_61_17->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_17->GetYaxis()->SetTitle("Counts");
-        h_dt_61_17->Draw();
-        c_dt_61_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_17.png");
-        // c_dt_61_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_17.png");
-        c_dt_61_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_17.png"));
-        h_dt_61_17->Reset();
-
-        TCanvas* c_dt_61_18 = new TCanvas("c_dt_61_18", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_18->SetLogy();
-        c_dt_61_18->cd();
-        h_dt_61_18->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_18->GetYaxis()->SetTitle("Counts");
-        h_dt_61_18->Draw();
-        c_dt_61_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_18.png");
-        // c_dt_61_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_18.png");
-        c_dt_61_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_18.png"));
-        h_dt_61_18->Reset();
-
-        TCanvas* c_dt_61_19 = new TCanvas("c_dt_61_19", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_19->SetLogy();
-        c_dt_61_19->cd();
-        h_dt_61_19->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_19->GetYaxis()->SetTitle("Counts");
-        h_dt_61_19->Draw();
-        c_dt_61_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_19.png");
-        // c_dt_61_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_19.png");
-        c_dt_61_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_19.png"));
-        h_dt_61_19->Reset();
-
-        TCanvas* c_dt_61_20 = new TCanvas("c_dt_61_20", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_20->SetLogy();
-        c_dt_61_20->cd();
-        h_dt_61_20->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_20->GetYaxis()->SetTitle("Counts");
-        h_dt_61_20->Draw();
-        c_dt_61_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_20.png");
-        // c_dt_61_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_20.png");
-        c_dt_61_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_20.png"));
-        h_dt_61_20->Reset();
-
-        TCanvas* c_dt_61_21 = new TCanvas("c_dt_61_21", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_21->SetLogy();
-        c_dt_61_21->cd();
-        h_dt_61_21->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_21->GetYaxis()->SetTitle("Counts");
-        h_dt_61_21->Draw();
-        c_dt_61_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_21.png");
-        // c_dt_61_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_21.png");
-        c_dt_61_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_21.png"));
-        h_dt_61_21->Reset();
-
-        TCanvas* c_dt_61_22 = new TCanvas("c_dt_61_22", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_22->SetLogy();
-        c_dt_61_22->cd();
-        h_dt_61_22->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_22->GetYaxis()->SetTitle("Counts");
-        h_dt_61_22->Draw();
-        c_dt_61_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_22.png");
-        // c_dt_61_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_22.png");
-        c_dt_61_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_22.png"));
-        h_dt_61_22->Reset();
-
-        TCanvas* c_dt_61_23 = new TCanvas("c_dt_61_23", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_23->SetLogy();
-        c_dt_61_23->cd();
-        h_dt_61_23->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_23->GetYaxis()->SetTitle("Counts");
-        h_dt_61_23->Draw();
-        c_dt_61_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_23.png");
-        // c_dt_61_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_23.png");
-        c_dt_61_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_23.png"));
-        h_dt_61_23->Reset();
-
-        TCanvas* c_dt_61_top = new TCanvas("c_dt_61_top", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_top->SetLogy();
-        c_dt_61_top->cd();
-        h_dt_61_top->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_top->GetYaxis()->SetTitle("Counts");
-        h_dt_61_top->Draw();
-        c_dt_61_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_dt_61_top.png");
-        // c_dt_61_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_dt_61_top.png");
-        c_dt_61_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_top.png"));
-        h_dt_61_top->Reset();
-        
-        TCanvas* c_vpint_16 = new TCanvas("c_vpint_16", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_16->SetLogy();
-        c_vpint_16->cd();
-        h_vpint_16->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_16->GetYaxis()->SetTitle("Counts");
-        h_vpint_16->Draw();
-        c_vpint_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_16.png");
-        // c_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_16.png");
-        c_vpint_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_16.png"));
-        h_vpint_16->Reset();
-
-        TCanvas* c_vpint_17 = new TCanvas("c_vpint_17", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_17->SetLogy();
-        c_vpint_17->cd();
-        h_vpint_17->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_17->GetYaxis()->SetTitle("Counts");
-        h_vpint_17->Draw();
-        c_vpint_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_17.png");
-        // c_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_17.png");
-        c_vpint_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_17.png"));
-        h_vpint_17->Reset();
-
-        TCanvas* c_vpint_18 = new TCanvas("c_vpint_18", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_18->SetLogy();
-        c_vpint_18->cd();
-        h_vpint_18->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_18->GetYaxis()->SetTitle("Counts");
-        h_vpint_18->Draw();
-        c_vpint_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_18.png");
-        // c_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_18.png");
-        c_vpint_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_18.png"));
-        h_vpint_18->Reset();
-
-        TCanvas* c_vpint_19 = new TCanvas("c_vpint_19", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_19->SetLogy();
-        c_vpint_19->cd();
-        h_vpint_19->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_19->GetYaxis()->SetTitle("Counts");
-        h_vpint_19->Draw();
-        c_vpint_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_19.png");
-        // c_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_19.png");
-        c_vpint_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_19.png"));
-        h_vpint_19->Reset();
-
-        TCanvas* c_vpint_20 = new TCanvas("c_vpint_20", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_20->SetLogy();
-        c_vpint_20->cd();
-        h_vpint_20->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_20->GetYaxis()->SetTitle("Counts");
-        h_vpint_20->Draw();
-        c_vpint_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_20.png");
-        // c_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_20.png");
-        c_vpint_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_20.png"));
-        h_vpint_20->Reset();
-
-        TCanvas* c_vpint_21 = new TCanvas("c_vpint_21", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_21->SetLogy();
-        c_vpint_21->cd();
-        h_vpint_21->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_21->GetYaxis()->SetTitle("Counts");
-        h_vpint_21->Draw();
-        c_vpint_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_21.png");
-        // c_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_21.png");
-        c_vpint_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_21.png"));
-        h_vpint_21->Reset();
-
-        TCanvas* c_vpint_22 = new TCanvas("c_vpint_22", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_22->SetLogy();
-        c_vpint_22->cd();
-        h_vpint_22->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_22->GetYaxis()->SetTitle("Counts");
-        h_vpint_22->Draw();
-        c_vpint_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_22.png");
-        // c_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_22.png");
-        c_vpint_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_22.png"));
-        h_vpint_22->Reset();
-
-        TCanvas* c_vpint_23 = new TCanvas("c_vpint_23", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_23->SetLogy();
-        c_vpint_23->cd();
-        h_vpint_23->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_23->GetYaxis()->SetTitle("Counts");
-        h_vpint_23->Draw();
-        c_vpint_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_23.png");
-        // c_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_23.png");
-        c_vpint_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_23.png"));
-        h_vpint_23->Reset();
-
-        TCanvas* c_vpint_top = new TCanvas("c_vpint_top", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_top->SetLogy();
-        c_vpint_top->cd();
-        h_vpint_top->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_top->GetYaxis()->SetTitle("Counts");
-        h_vpint_top->Draw();
-        c_vpint_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_vpint_top.png");
-        // c_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_vpint_top.png");
-        c_vpint_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_top.png"));
-        h_vpint_top->Reset();
-
-        TCanvas* c_detint_vs_vpint_16 = new TCanvas("c_detint_vs_vpint_16", "SiPM 1 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_16->SetLogy();
-        // c_detint_vs_vpint_16->SetLogx();
-        c_detint_vs_vpint_16->cd();
-        h_detint_vs_vpint_16->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_16->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_16->Draw();
-        c_detint_vs_vpint_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_16.png");
-        // c_detint_vs_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_16.png");
-        c_detint_vs_vpint_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_16.png"));
-        h_detint_vs_vpint_16->Reset();
-
-        TCanvas* c_detint_vs_vpint_17 = new TCanvas("c_detint_vs_vpint_17", "SiPM 2 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_17->SetLogy();
-        // c_detint_vs_vpint_17->SetLogx();
-        c_detint_vs_vpint_17->cd();
-        h_detint_vs_vpint_17->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_17->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_17->Draw();
-        c_detint_vs_vpint_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_17.png");
-        // c_detint_vs_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_17.png");
-        c_detint_vs_vpint_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_17.png"));
-        h_detint_vs_vpint_17->Reset();
-
-        TCanvas* c_detint_vs_vpint_18 = new TCanvas("c_detint_vs_vpint_18", "SiPM 3 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_18->SetLogy();
-        // c_detint_vs_vpint_18->SetLogx();
-        c_detint_vs_vpint_18->cd();
-        h_detint_vs_vpint_18->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_18->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_18->Draw();
-        c_detint_vs_vpint_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_18.png");
-        // c_detint_vs_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_18.png");
-        c_detint_vs_vpint_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_18.png"));
-        h_detint_vs_vpint_18->Reset();
-
-        TCanvas* c_detint_vs_vpint_19 = new TCanvas("c_detint_vs_vpint_19", "SiPM 4 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_19->SetLogy();
-        // c_detint_vs_vpint_19->SetLogx();
-        c_detint_vs_vpint_19->cd();
-        h_detint_vs_vpint_19->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_19->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_19->Draw();
-        c_detint_vs_vpint_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_19.png");
-        // c_detint_vs_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_19.png");
-        c_detint_vs_vpint_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_19.png"));
-        h_detint_vs_vpint_19->Reset();
-
-        TCanvas* c_detint_vs_vpint_20 = new TCanvas("c_detint_vs_vpint_20", "SiPM 5 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_20->SetLogy();
-        // c_detint_vs_vpint_20->SetLogx();
-        c_detint_vs_vpint_20->cd();
-        h_detint_vs_vpint_20->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_20->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_20->Draw();
-        c_detint_vs_vpint_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_20.png");
-        // c_detint_vs_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_20.png");
-        c_detint_vs_vpint_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_20.png"));
-        h_detint_vs_vpint_20->Reset();
-
-        TCanvas* c_detint_vs_vpint_21 = new TCanvas("c_detint_vs_vpint_21", "SiPM 6 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_21->SetLogy();
-        // c_detint_vs_vpint_21->SetLogx();
-        c_detint_vs_vpint_21->cd();
-        h_detint_vs_vpint_21->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_21->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_21->Draw();
-        c_detint_vs_vpint_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_21.png");
-        // c_detint_vs_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_21.png");
-        c_detint_vs_vpint_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_21.png"));
-        h_detint_vs_vpint_21->Reset();
-
-        TCanvas* c_detint_vs_vpint_22 = new TCanvas("c_detint_vs_vpint_22", "SiPM 7 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_22->SetLogy();
-        // c_detint_vs_vpint_22->SetLogx();
-        c_detint_vs_vpint_22->cd();
-        h_detint_vs_vpint_22->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_22->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_22->Draw();
-        c_detint_vs_vpint_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_22.png");
-        // c_detint_vs_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_22.png");
-        c_detint_vs_vpint_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_22.png"));
-        h_detint_vs_vpint_22->Reset();
-
-        TCanvas* c_detint_vs_vpint_23 = new TCanvas("c_detint_vs_vpint_23", "SiPM 8 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_23->SetLogy();
-        // c_detint_vs_vpint_23->SetLogx();
-        c_detint_vs_vpint_23->cd();
-        h_detint_vs_vpint_23->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_23->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_23->Draw();
-        c_detint_vs_vpint_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_23.png");
-        // c_detint_vs_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_23.png");
-        c_detint_vs_vpint_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_23.png"));
-        h_detint_vs_vpint_23->Reset();
-
-        TCanvas* c_detint_vs_vpint_top = new TCanvas("c_detint_vs_vpint_top", "Top SiPM & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_top->SetLogy();
-        // c_detint_vs_vpint_top->SetLogx();
-        c_detint_vs_vpint_top->cd();
-        h_detint_vs_vpint_top->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_top->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_top->Draw();
-        c_detint_vs_vpint_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_top.png");
-        // c_detint_vs_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots11241/h_detint_vs_vpint_top.png");
-        c_detint_vs_vpint_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_top.png"));
-        h_detint_vs_vpint_top->Reset();
-
-        TCanvas* c_tB = new TCanvas("c_tB", "TriggerBits Distribution", 1200, 700);
-        c_tB->SetLogy();
-        c_tB->cd();
-        h_tB->GetXaxis()->SetTitle("triggerBits Value");
-        h_tB->GetYaxis()->SetTitle("Counts");
-        h_tB->Draw();
-        c_tB->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_tB.png");
-        c_tB->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_tB.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_tB.png"));
-        h_tB->Reset();
-
-        TCanvas* c_blM_pmt = new TCanvas("c_blM_pmt", "PMT baselineMean Distribution", 1200, 700);
-        c_blM_pmt->SetLogy();
-        c_blM_pmt->cd();
-        h_blM_pmt->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_pmt->GetYaxis()->SetTitle("Counts");
-        h_blM_pmt->Draw();
-        c_blM_pmt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_blM_pmt.png");
-        c_blM_pmt->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_pmt.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_blM_pmt.png"));
-        h_blM_pmt->Reset();
-
-        TCanvas* c_blM_vp = new TCanvas("c_blM_vp", "SiPM baselineMean Distribution", 1200, 700);
-        c_blM_vp->SetLogy();
-        c_blM_vp->cd();
-        h_blM_vp->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_vp->GetYaxis()->SetTitle("Counts");
-        h_blM_vp->Draw();
-        c_blM_vp->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_blM_vp.png");
-        c_blM_vp->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_vp.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_blM_vp.png"));
-        h_blM_vp->Reset();
-
-        TCanvas* c_blM_ev61 = new TCanvas("c_blM_ev61", "Event 61 baselineMean Distribution", 1200, 700);
-        c_blM_ev61->SetLogy();
-        c_blM_ev61->cd();
-        h_blM_ev61->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_ev61->GetYaxis()->SetTitle("Counts");
-        h_blM_ev61->Draw();
-        c_blM_ev61->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots11241/h_blM_ev61.png");
-        c_blM_ev61->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_ev61.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots11241/h_blM_ev61.png"));
-        h_blM_ev61->Reset();
-
-    }
-
-    if (run == 12636) {
-
-        TCanvas* c_dt = new TCanvas("c_dt", "Delta-T", 900, 700);
-        // c_dt->SetLogy();
-        c_dt->cd();
-
-        TF1* func1 = new TF1("func1", "[0]+[1]*exp(-x/[2])", 2100, 12100);
-        func1->SetParNames("Baseline", "Amplitude", "Time Constant");
-        func1->SetParameters(100, 15000, 2100);
-        h_dt->Fit("func1", "R");
-        Double_t chi2_1 = func1->GetChisquare();
-
-        cout << "\n" << "Chi-square of e^x/a fit: " << chi2_1 << "\n" << endl;
-
-        // TF1* func2 = new TF1("func2", "[0]+[1]*exp(-x/2200)+[2]*exp(-x/1800)", 2100, 12100);
-        // func2->SetParNames("Baseline", "Amplitude_u+", "Amplitude_u-");
-        // func2->SetParameters(100, 15000, 15000);
-        // h_dt->Fit("func2", "R");
-        // Double_t chi2_2 = func2->GetChisquare();
-
-        // cout << "\n" << "Chi-square of e^x/2200 + e^x/1800 fit: " << chi2_2 << "\n" << endl;
-
-        TF1* func3 = new TF1("func3", "[0]+[1]*exp(-x/[2])+[3]*exp(-x/[4])", 2100, 12100);
-        func3->SetParNames("Baseline", "Amplitude_u+", "Time Constant_u+", "Amplitude_u-", "Time Constant_u-");
-        func3->SetParameters(100, 15000, 2200, 15000, 1800);
-        h_dt->Fit("func3", "R");
-        Double_t chi2_3 = func3->GetChisquare();
-
-        cout << "\n" << "Chi-square of e^x/a + e^x/b fit: " << chi2_3 << endl;
-
-        h_dt->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt->GetYaxis()->SetTitle("Counts");
-        h_dt->GetYaxis()->SetRange(0, 200);
-        h_dt->Draw();
-        func1->Draw("same");
-        func1->SetLineColor(2);
-        // func2->Draw("same");
-        // func2->SetLineColor(3);
-        func3->Draw("same");
-        func3->SetLineColor(3);
-        TLegend *leg_dt = new TLegend(0.9, 0.65, 0.65, 0.45);
-        leg_dt->AddEntry(func1, "e^x/a fit", "l");
-        // leg_dt->AddEntry(func2, "e^x/2200 + e^x/1800 fit", "l");
-        leg_dt->AddEntry(func3, "e^x/a + e^x/b fit", "l");
-        leg_dt->Draw();
-        c_dt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt.png");
-        c_dt->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_dt.png"));
-        h_dt->Reset();
-
-        h_intmuons->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmuons->GetYaxis()->SetTitle("Counts");
-        h_intmuons->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_intmuons.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_intmuons.png"));
-        h_intmuons->Reset();
-
-        h_intmichels->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intmichels->GetYaxis()->SetTitle("Counts");
-        h_intmichels->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_intmichels.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_intmichels.png"));
-        // h_intmichels->Print("all");
-        h_intmichels->Reset();
-
-        h_intcosmics->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_intcosmics->GetYaxis()->SetTitle("Counts");
-        h_intcosmics->Draw();
-        gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_intcosmics.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_intcosmics.png"));
-        // h_intcosmics->Print("all");
-        h_intcosmics->Reset();
-
-        TCanvas* c_34detint = new TCanvas("c_34detint", "Distribution of All tB34 Det. Integral Values", 1200, 700);
-        c_34detint->SetLogy();
-        c_34detint->cd();
-        h_34detint->GetXaxis()->SetTitle("Integral (Ph.e.)");
-        h_34detint->GetYaxis()->SetTitle("Counts");
-        h_34detint->Draw();
-        c_34detint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_34detint.png");
-        // c_34detint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_34detint.png");
-        c_34detint->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34detint.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34detint.png"));
-        h_34detint->Reset();
-
-        TCanvas* c_34vpint = new TCanvas("c_34vpint", "Distribution of All tB34 VP Integral Values", 1200, 700);
-        c_34vpint->SetLogy();
-        c_34vpint->cd();
-        h_34vpint->GetXaxis()->SetTitle("Integral (ADC)");
-        h_34vpint->GetYaxis()->SetTitle("Counts");
-        h_34vpint->Draw();
-        c_34vpint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_34vpint.png");
-        // c_34vpint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_34vpint.png");
-        c_34vpint->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34vpint.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34vpint.png"));
-        h_34vpint->Reset();
-
-        TCanvas* c_slice_vpintavg = new TCanvas("c_slice_vpintavg", "Distribution of Averaged Veto Panel Integral Values", 1200, 700);
-        c_slice_vpintavg->SetLogy();
-        c_slice_vpintavg->cd();
-        h_slice_vpintavg->GetXaxis()->SetTitle("Integral (ADC)");
-        h_slice_vpintavg->GetYaxis()->SetTitle("Counts");
-        h_slice_vpintavg->Draw();
-        c_slice_vpintavg->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_slice_vpintavg.png");
-        // c_slice_vpintavg->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_slice_vpintavg.png");
-        c_slice_vpintavg->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_slice_vpintavg.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_slice_vpintavg.png"));
-        h_slice_vpintavg->Reset();
-
-        TCanvas* c_dt_61_16 = new TCanvas("c_dt_61_16", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_16->SetLogy();
-        c_dt_61_16->cd();
-        h_dt_61_16->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_16->GetYaxis()->SetTitle("Counts");
-        h_dt_61_16->Draw();
-        c_dt_61_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_16.png");
-        // c_dt_61_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_16.png");
-        c_dt_61_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_16.png"));
-        h_dt_61_16->Reset();
-
-        TCanvas* c_dt_61_17 = new TCanvas("c_dt_61_17", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_17->SetLogy();
-        c_dt_61_17->cd();
-        h_dt_61_17->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_17->GetYaxis()->SetTitle("Counts");
-        h_dt_61_17->Draw();
-        c_dt_61_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_17.png");
-        // c_dt_61_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_17.png");
-        c_dt_61_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_17.png"));
-        h_dt_61_17->Reset();
-
-        TCanvas* c_dt_61_18 = new TCanvas("c_dt_61_18", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_18->SetLogy();
-        c_dt_61_18->cd();
-        h_dt_61_18->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_18->GetYaxis()->SetTitle("Counts");
-        h_dt_61_18->Draw();
-        c_dt_61_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_18.png");
-        // c_dt_61_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_18.png");
-        c_dt_61_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_18.png"));
-        h_dt_61_18->Reset();
-
-        TCanvas* c_dt_61_19 = new TCanvas("c_dt_61_19", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_19->SetLogy();
-        c_dt_61_19->cd();
-        h_dt_61_19->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_19->GetYaxis()->SetTitle("Counts");
-        h_dt_61_19->Draw();
-        c_dt_61_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_19.png");
-        // c_dt_61_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_19.png");
-        c_dt_61_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_19.png"));
-        h_dt_61_19->Reset();
-
-        TCanvas* c_dt_61_20 = new TCanvas("c_dt_61_20", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_20->SetLogy();
-        c_dt_61_20->cd();
-        h_dt_61_20->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_20->GetYaxis()->SetTitle("Counts");
-        h_dt_61_20->Draw();
-        c_dt_61_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_20.png");
-        // c_dt_61_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_20.png");
-        c_dt_61_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_20.png"));
-        h_dt_61_20->Reset();
-
-        TCanvas* c_dt_61_21 = new TCanvas("c_dt_61_21", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_21->SetLogy();
-        c_dt_61_21->cd();
-        h_dt_61_21->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_21->GetYaxis()->SetTitle("Counts");
-        h_dt_61_21->Draw();
-        c_dt_61_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_21.png");
-        // c_dt_61_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_21.png");
-        c_dt_61_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_21.png"));
-        h_dt_61_21->Reset();
-
-        TCanvas* c_dt_61_22 = new TCanvas("c_dt_61_22", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_22->SetLogy();
-        c_dt_61_22->cd();
-        h_dt_61_22->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_22->GetYaxis()->SetTitle("Counts");
-        h_dt_61_22->Draw();
-        c_dt_61_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_22.png");
-        // c_dt_61_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_22.png");
-        c_dt_61_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_22.png"));
-        h_dt_61_22->Reset();
-
-        TCanvas* c_dt_61_23 = new TCanvas("c_dt_61_23", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_23->SetLogy();
-        c_dt_61_23->cd();
-        h_dt_61_23->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_23->GetYaxis()->SetTitle("Counts");
-        h_dt_61_23->Draw();
-        c_dt_61_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_23.png");
-        // c_dt_61_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_23.png");
-        c_dt_61_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_23.png"));
-        h_dt_61_23->Reset();
-
-        TCanvas* c_dt_61_top = new TCanvas("c_dt_61_top", "Delta-T Between Event 61 and SiPM Events", 900, 700);
-        // c_dt_61_top->SetLogy();
-        c_dt_61_top->cd();
-        h_dt_61_top->GetXaxis()->SetTitle("Delta-T (ns)");
-        h_dt_61_top->GetYaxis()->SetTitle("Counts");
-        h_dt_61_top->Draw();
-        c_dt_61_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_dt_61_top.png");
-        // c_dt_61_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_dt_61_top.png");
-        c_dt_61_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_top.png"));
-        h_dt_61_top->Reset();
-
-        TCanvas* c_vpint_16 = new TCanvas("c_vpint_16", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_16->SetLogy();
-        c_vpint_16->cd();
-        h_vpint_16->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_16->GetYaxis()->SetTitle("Counts");
-        h_vpint_16->Draw();
-        c_vpint_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_16.png");
-        // c_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_16.png");
-        c_vpint_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_16.png"));
-        h_vpint_16->Reset();
-
-        TCanvas* c_vpint_17 = new TCanvas("c_vpint_17", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_17->SetLogy();
-        c_vpint_17->cd();
-        h_vpint_17->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_17->GetYaxis()->SetTitle("Counts");
-        h_vpint_17->Draw();
-        c_vpint_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_17.png");
-        // c_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_17.png");
-        c_vpint_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_17.png"));
-        h_vpint_17->Reset();
-
-        TCanvas* c_vpint_18 = new TCanvas("c_vpint_18", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_18->SetLogy();
-        c_vpint_18->cd();
-        h_vpint_18->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_18->GetYaxis()->SetTitle("Counts");
-        h_vpint_18->Draw();
-        c_vpint_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_18.png");
-        // c_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_18.png");
-        c_vpint_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_18.png"));
-        h_vpint_18->Reset();
-
-        TCanvas* c_vpint_19 = new TCanvas("c_vpint_19", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_19->SetLogy();
-        c_vpint_19->cd();
-        h_vpint_19->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_19->GetYaxis()->SetTitle("Counts");
-        h_vpint_19->Draw();
-        c_vpint_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_19.png");
-        // c_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_19.png");
-        c_vpint_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_19.png"));
-        h_vpint_19->Reset();
-
-        TCanvas* c_vpint_20 = new TCanvas("c_vpint_20", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_20->SetLogy();
-        c_vpint_20->cd();
-        h_vpint_20->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_20->GetYaxis()->SetTitle("Counts");
-        h_vpint_20->Draw();
-        c_vpint_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_20.png");
-        // c_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_20.png");
-        c_vpint_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_20.png"));
-        h_vpint_20->Reset();
-
-        TCanvas* c_vpint_21 = new TCanvas("c_vpint_21", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_21->SetLogy();
-        c_vpint_21->cd();
-        h_vpint_21->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_21->GetYaxis()->SetTitle("Counts");
-        h_vpint_21->Draw();
-        c_vpint_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_21.png");
-        // c_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_21.png");
-        c_vpint_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_21.png"));
-        h_vpint_21->Reset();
-
-        TCanvas* c_vpint_22 = new TCanvas("c_vpint_22", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_22->SetLogy();
-        c_vpint_22->cd();
-        h_vpint_22->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_22->GetYaxis()->SetTitle("Counts");
-        h_vpint_22->Draw();
-        c_vpint_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_22.png");
-        // c_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_22.png");
-        c_vpint_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_22.png"));
-        h_vpint_22->Reset();
-
-        TCanvas* c_vpint_23 = new TCanvas("c_vpint_23", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_23->SetLogy();
-        c_vpint_23->cd();
-        h_vpint_23->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_23->GetYaxis()->SetTitle("Counts");
-        h_vpint_23->Draw();
-        c_vpint_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_23.png");
-        // c_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_23.png");
-        c_vpint_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_23.png"));
-        h_vpint_23->Reset();
-
-        TCanvas* c_vpint_top = new TCanvas("c_vpint_top", "Event 61 and SiPM dt Integral Values", 900, 700);
-        c_vpint_top->SetLogy();
-        c_vpint_top->cd();
-        h_vpint_top->GetXaxis()->SetTitle("Integral (ADC)");
-        h_vpint_top->GetYaxis()->SetTitle("Counts");
-        h_vpint_top->Draw();
-        c_vpint_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_vpint_top.png");
-        // c_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_vpint_top.png");
-        c_vpint_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_top.png"));
-        h_vpint_top->Reset();
-
-        TCanvas* c_detint_vs_vpint_16 = new TCanvas("c_detint_vs_vpint_16", "SiPM 1 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_16->SetLogy();
-        // c_detint_vs_vpint_16->SetLogx();
-        c_detint_vs_vpint_16->cd();
-        h_detint_vs_vpint_16->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_16->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_16->Draw();
-        c_detint_vs_vpint_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_16.png");
-        // c_detint_vs_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_16.png");
-        c_detint_vs_vpint_16->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_16.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_16.png"));
-        h_detint_vs_vpint_16->Reset();
-
-        TCanvas* c_detint_vs_vpint_17 = new TCanvas("c_detint_vs_vpint_17", "SiPM 2 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_17->SetLogy();
-        // c_detint_vs_vpint_17->SetLogx();
-        c_detint_vs_vpint_17->cd();
-        h_detint_vs_vpint_17->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_17->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_17->Draw();
-        c_detint_vs_vpint_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_17.png");
-        // c_detint_vs_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_17.png");
-        c_detint_vs_vpint_17->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_17.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_17.png"));
-        h_detint_vs_vpint_17->Reset();
-
-        TCanvas* c_detint_vs_vpint_18 = new TCanvas("c_detint_vs_vpint_18", "SiPM 3 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_18->SetLogy();
-        // c_detint_vs_vpint_18->SetLogx();
-        c_detint_vs_vpint_18->cd();
-        h_detint_vs_vpint_18->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_18->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_18->Draw();
-        c_detint_vs_vpint_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_18.png");
-        // c_detint_vs_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_18.png");
-        c_detint_vs_vpint_18->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_18.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_18.png"));
-        h_detint_vs_vpint_18->Reset();
-
-        TCanvas* c_detint_vs_vpint_19 = new TCanvas("c_detint_vs_vpint_19", "SiPM 4 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_19->SetLogy();
-        // c_detint_vs_vpint_19->SetLogx();
-        c_detint_vs_vpint_19->cd();
-        h_detint_vs_vpint_19->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_19->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_19->Draw();
-        c_detint_vs_vpint_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_19.png");
-        // c_detint_vs_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_19.png");
-        c_detint_vs_vpint_19->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_19.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_19.png"));
-        h_detint_vs_vpint_19->Reset();
-
-        TCanvas* c_detint_vs_vpint_20 = new TCanvas("c_detint_vs_vpint_20", "SiPM 5 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_20->SetLogy();
-        // c_detint_vs_vpint_20->SetLogx();
-        c_detint_vs_vpint_20->cd();
-        h_detint_vs_vpint_20->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_20->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_20->Draw();
-        c_detint_vs_vpint_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_20.png");
-        // c_detint_vs_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_20.png");
-        c_detint_vs_vpint_20->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_20.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_20.png"));
-        h_detint_vs_vpint_20->Reset();
-
-        TCanvas* c_detint_vs_vpint_21 = new TCanvas("c_detint_vs_vpint_21", "SiPM 6 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_21->SetLogy();
-        // c_detint_vs_vpint_21->SetLogx();
-        c_detint_vs_vpint_21->cd();
-        h_detint_vs_vpint_21->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_21->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_21->Draw();
-        c_detint_vs_vpint_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_21.png");
-        // c_detint_vs_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_21.png");
-        c_detint_vs_vpint_21->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_21.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_21.png"));
-        h_detint_vs_vpint_21->Reset();
-
-        TCanvas* c_detint_vs_vpint_22 = new TCanvas("c_detint_vs_vpint_22", "SiPM 7 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_22->SetLogy();
-        // c_detint_vs_vpint_22->SetLogx();
-        c_detint_vs_vpint_22->cd();
-        h_detint_vs_vpint_22->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_22->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_22->Draw();
-        c_detint_vs_vpint_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_22.png");
-        // c_detint_vs_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_22.png");
-        c_detint_vs_vpint_22->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_22.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_22.png"));
-        h_detint_vs_vpint_22->Reset();
-
-        TCanvas* c_detint_vs_vpint_23 = new TCanvas("c_detint_vs_vpint_23", "SiPM 8 & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_23->SetLogy();
-        // c_detint_vs_vpint_23->SetLogx();
-        c_detint_vs_vpint_23->cd();
-        h_detint_vs_vpint_23->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_23->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_23->Draw();
-        c_detint_vs_vpint_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_23.png");
-        // c_detint_vs_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_23.png");
-        c_detint_vs_vpint_23->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_23.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_23.png"));
-        h_detint_vs_vpint_23->Reset();
-
-        TCanvas* c_detint_vs_vpint_top = new TCanvas("c_detint_vs_vpint_top", "Top SiPM & PMT Integral Values", 900, 700);
-        c_detint_vs_vpint_top->SetLogy();
-        // c_detint_vs_vpint_top->SetLogx();
-        c_detint_vs_vpint_top->cd();
-        h_detint_vs_vpint_top->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
-        h_detint_vs_vpint_top->GetYaxis()->SetTitle("SiPM Integral (ADC)");
-        h_detint_vs_vpint_top->Draw();
-        c_detint_vs_vpint_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_top.png");
-        // c_detint_vs_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots12636/h_detint_vs_vpint_top.png");
-        c_detint_vs_vpint_top->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_top.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_top.png"));
-        h_detint_vs_vpint_top->Reset();
-
-        TCanvas* c_tB = new TCanvas("c_tB", "TriggerBits Distribution", 1200, 700);
-        c_tB->SetLogy();
-        c_tB->cd();
-        h_tB->GetXaxis()->SetTitle("triggerBits Value");
-        h_tB->GetYaxis()->SetTitle("Counts");
-        h_tB->Draw();
-        c_tB->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_tB.png");
-        c_tB->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_tB.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_tB.png"));
-        h_tB->Reset();
-
-        TCanvas* c_blM_pmt = new TCanvas("c_blM_pmt", "PMT baselineMean Distribution", 1200, 700);
-        c_blM_pmt->SetLogy();
-        c_blM_pmt->cd();
-        h_blM_pmt->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_pmt->GetYaxis()->SetTitle("Counts");
-        h_blM_pmt->Draw();
-        c_blM_pmt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_blM_pmt.png");
-        c_blM_pmt->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_pmt.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_blM_pmt.png"));
-        h_blM_pmt->Reset();
-
-        TCanvas* c_blM_vp = new TCanvas("c_blM_vp", "SiPM baselineMean Distribution", 1200, 700);
-        c_blM_vp->SetLogy();
-        c_blM_vp->cd();
-        h_blM_vp->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_vp->GetYaxis()->SetTitle("Counts");
-        h_blM_vp->Draw();
-        c_blM_vp->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_blM_vp.png");
-        c_blM_vp->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_vp.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_blM_vp.png"));
-        h_blM_vp->Reset();
-
-        TCanvas* c_blM_ev61 = new TCanvas("c_blM_ev61", "Event 61 baselineMean Distribution", 1200, 700);
-        c_blM_ev61->SetLogy();
-        c_blM_ev61->cd();
-        h_blM_ev61->GetXaxis()->SetTitle("baselineMean Value");
-        h_blM_ev61->GetYaxis()->SetTitle("Counts");
-        h_blM_ev61->Draw();
-        c_blM_ev61->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots12636/h_blM_ev61.png");
-        c_blM_ev61->Close();
-        // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_ev61.png"));
-        // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots12636/h_blM_ev61.png"));
-        h_blM_ev61->Reset();
-
-    }
+    /*TLatex *lat_dt_9 = new TLatex(0.3, 0.7, Form("e^x/a chi-square = %.2f", chi2_1));
+    lat_dt_9->SetNDC();
+    lat_dt_9->SetTextColor(1);
+    lat_dt_9->SetTextSize(0.02);
+    lat_dt_9->Draw();
+
+    Double_t param30 = func3->GetParameter(0);
+    Double_t param31 = func3->GetParameter(1);
+    Double_t param32 = func3->GetParameter(2);
+    Double_t param33 = func3->GetParameter(3);
+    Double_t param34 = func3->GetParameter(4);
+
+    TLatex *lat_dt_4 = new TLatex(0.3, 0.65, Form("e^x/a + e^x/b baseline = %.2f", param30));
+    lat_dt_4->SetNDC();
+    lat_dt_4->SetTextColor(1);
+    lat_dt_4->SetTextSize(0.02);
+    lat_dt_4->Draw();
+
+    TLatex *lat_dt_5 = new TLatex(0.3, 0.6, Form("e^x/a + e^x/b u+ amplitude = %.2f", param31));
+    lat_dt_5->SetNDC();
+    lat_dt_5->SetTextColor(1);
+    lat_dt_5->SetTextSize(0.02);
+    lat_dt_5->Draw();
+
+    TLatex *lat_dt_6 = new TLatex(0.3, 0.55, Form("e^x/a + e^x/b u+ time constant (ns) = %.2f", param32));
+    lat_dt_6->SetNDC();
+    lat_dt_6->SetTextColor(1);
+    lat_dt_6->SetTextSize(0.02);
+    lat_dt_6->Draw();
+
+    TLatex *lat_dt_7 = new TLatex(0.3, 0.5, Form("e^x/a + e^x/b u- amplitude = %.2f", param33));
+    lat_dt_7->SetNDC();
+    lat_dt_7->SetTextColor(1);
+    lat_dt_7->SetTextSize(0.02);
+    lat_dt_7->Draw();
+
+    TLatex *lat_dt_8 = new TLatex(0.3, 0.45, Form("e^x/a + e^x/b u- time constant (ns) = %.2f", param34));
+    lat_dt_8->SetNDC();
+    lat_dt_8->SetTextColor(1);
+    lat_dt_8->SetTextSize(0.02);
+    lat_dt_8->Draw();
+
+    TLatex *lat_dt_10 = new TLatex(0.3, 0.4, Form("e^x/a + e^x/b chi-square = %.2f", chi2_3));
+    lat_dt_10->SetNDC();
+    lat_dt_10->SetTextColor(1);
+    lat_dt_10->SetTextSize(0.02);
+    lat_dt_10->Draw();*/
+
+    c_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_%i.png", run));
+    c_dt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt.png"));
+    h_dt->Reset();
+
+    h_intmuons->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmuons->GetYaxis()->SetTitle("Counts");
+    h_intmuons->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmuons_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmuons.png"));
+    h_intmuons->Reset();
+
+    TCanvas* c_intmichels = new TCanvas("c_intmichels", "Michel Electron Integral Values", 1200, 700);
+    // c_intmichels->SetLogy();
+    c_intmichels->cd();
+
+    TF1* func_intmichels = new TF1("func_intmichels", "[0]+[1]*exp(-pow((x-[2]),2)/(2*pow([3],2)))", 60, 280);
+    double par_michels[] = {500, 4000, 150, 100};
+    func_intmichels->SetParameters(par_michels);
+    func_intmichels->SetParName(0, "Baseline");
+    func_intmichels->SetParName(1, "Amplitude");
+    func_intmichels->SetParName(2, "PeakCenter");
+    func_intmichels->SetParName(3, "StandardDeviation");
+    h_intmichels->Fit("func_intmichels", "R");
+    double_t am_michels = func_intmichels->GetParameter(1);
+    double_t pc_michels = func_intmichels->GetParameter(2);
+
+    h_intmichels->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels->GetYaxis()->SetTitle("Counts");
+    h_intmichels->Draw();
+    TLatex *lat_intmichels_1 = new TLatex(0.5, 0.7, Form("Michel Energy Average = %.2f", avg_mich_en));
+    lat_intmichels_1->SetNDC();
+    lat_intmichels_1->SetTextColor(1);
+    lat_intmichels_1->SetTextSize(0.04);
+    lat_intmichels_1->Draw();
+    TLatex *lat_intmichels_2 = new TLatex(0.5, 0.6, Form("Michel Energy Peak Center = %.2f", pc_michels));
+    lat_intmichels_2->SetNDC();
+    lat_intmichels_2->SetTextColor(1);
+    lat_intmichels_2->SetTextSize(0.04);
+    lat_intmichels_2->Draw();
+    c_intmichels->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_%i.png", run));
+    // c_intmichels->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_intmichels.png");
+    c_intmichels->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels.png"));
+    // h_intmichels->Print("all");
+    h_intmichels->Reset();
+
+    MIAFile << hour12_st << "\t" << am_michels << endl;
+    MIPFile << hour12_st << "\t" << pc_michels << endl;
+
+    TCanvas* c_dt_v_intmichels = new TCanvas("c_dt_v_intmichels", "Event 61 Detector dt vs Integral Value", 1200, 700);
+    // c_dt_v_intmichels->SetLogy();
+    c_dt_v_intmichels->cd();
+    h_dt_v_intmichels->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_v_intmichels->GetYaxis()->SetTitle("Integral (Ph.e.)");
+    h_dt_v_intmichels->SetMarkerStyle(7);
+    h_dt_v_intmichels->Draw();
+    c_dt_v_intmichels->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_v_intmichels_%i.png", run));
+    // c_dt_v_intmichels->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_v_intmichels.png");
+    c_dt_v_intmichels->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_v_intmichels.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_v_intmichels.png"));
+    h_dt_v_intmichels->Reset();
+
+    h_intcosmics->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intcosmics->GetYaxis()->SetTitle("Counts");
+    h_intcosmics->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intcosmics_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intcosmics.png"));
+    // h_intcosmics->Print("all");
+    h_intcosmics->Reset();
+
+    TCanvas* c_muon_pmt_sipm_dt = new TCanvas("c_muon_pmt_sipm_dt", "Muon PMT vs SiPM dt", 1200, 700);
+    c_muon_pmt_sipm_dt->SetLogy();
+    c_muon_pmt_sipm_dt->cd();
+
+    TF1* func_pmt_sipm_dt = new TF1("func_pmt_sipm_dt", "[0]+[1]*exp(-1*pow((x-[2]),2)/(2*pow([3],2)))", -40, 60);
+    double par_pmt_sipm_dt[] = {1000, 6000000, 10, 20};
+    func_pmt_sipm_dt->SetParameters(par_pmt_sipm_dt);
+    func_pmt_sipm_dt->SetParName(0, "Baseline");
+    func_pmt_sipm_dt->SetParName(1, "Amplitude");
+    func_pmt_sipm_dt->SetParName(2, "PeakCenter");
+    func_pmt_sipm_dt->SetParName(3, "StandardDeviation");
+    h_muon_pmt_sipm_dt->Fit("func_pmt_sipm_dt", "R");
+    double_t dt_center = func_pmt_sipm_dt->GetParameter(2);
+    double_t dt_sigma = func_pmt_sipm_dt->GetParameter(3);
+
+    h_muon_pmt_sipm_dt->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_muon_pmt_sipm_dt->GetYaxis()->SetTitle("Counts");
+    // h_muon_pmt_sipm_dt->GetYaxis()->SetRange(0, 50);
+    h_muon_pmt_sipm_dt->Draw();
+    TLatex *lat_pmt_sipm_dt = new TLatex(0.6, 0.7, Form("Peak Center #pm Sigma = %.2f #pm %.2f", dt_center, dt_sigma));
+    lat_pmt_sipm_dt->SetNDC();
+    lat_pmt_sipm_dt->SetTextColor(1);
+    lat_pmt_sipm_dt->SetTextSize(0.04);
+    lat_pmt_sipm_dt->Draw();
+    func_pmt_sipm_dt->Draw("same");
+    func_pmt_sipm_dt->SetLineColor(2);
+    
+    c_muon_pmt_sipm_dt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_muon_pmt_sipm_dt.png");
+    // c_muon_pmt_sipm_dt->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_muon_pmt_sipm_dt.png");
+    c_muon_pmt_sipm_dt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_muon_pmt_sipm_dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_muon_pmt_sipm_dt.png"));
+    h_muon_pmt_sipm_dt->Reset();
+
+    TCanvas* c_only_one_sipm = new TCanvas("c_only_one_sipm", "Only One SiPM Integrals", 1200, 700);
+    c_only_one_sipm->SetLogy();
+    c_only_one_sipm->cd();
+    h_only_one_sipm->GetXaxis()->SetTitle("Integral (ADC)");
+    h_only_one_sipm->GetYaxis()->SetTitle("Counts");
+    // h_only_one_sipm->GetYaxis()->SetRange(0, 50);
+    h_only_one_sipm->Draw();
+    c_only_one_sipm->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_only_one_sipm.png");
+    // c_only_one_sipm->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_only_one_sipm.png");
+    c_only_one_sipm->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_only_one_sipm.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_only_one_sipm.png"));
+    h_only_one_sipm->Reset();
+    
+    TCanvas* c_34detint = new TCanvas("c_34detint", "Distribution of All tB34 Det. Integral Values", 1200, 700);
+    c_34detint->SetLogy();
+    c_34detint->cd();
+    h_34detint->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_34detint->GetYaxis()->SetTitle("Counts");
+    h_34detint->Draw();
+    c_34detint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_34detint.png");
+    // c_34detint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_34detint.png");
+    c_34detint->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34detint.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34detint.png"));
+    h_34detint->Reset();
+    // delete TCanvas c_34detint;           // Every time you have "new", need "delete" after
+
+    TCanvas* c_34vpint = new TCanvas("c_34vpint", "Distribution of All tB34 VP Integral Values", 1200, 700);
+    c_34vpint->SetLogy();
+    c_34vpint->cd();
+    h_34vpint->GetXaxis()->SetTitle("Integral (ADC)");
+    h_34vpint->GetYaxis()->SetTitle("Counts");
+    h_34vpint->Draw();
+    c_34vpint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_34vpint.png");
+    // c_34vpint->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_34vpint.png");
+    c_34vpint->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_34vpint.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_34vpint.png"));
+    h_34vpint->Reset();
+
+    TCanvas* c_slice_vpintavg = new TCanvas("c_slice_vpintavg", "Distribution of Averaged Veto Panel Integral Values", 1200, 700);
+    c_slice_vpintavg->SetLogy();
+    c_slice_vpintavg->cd();
+    h_slice_vpintavg->GetXaxis()->SetTitle("Integral (ADC)");
+    h_slice_vpintavg->GetYaxis()->SetTitle("Counts");
+    h_slice_vpintavg->Draw();
+    c_slice_vpintavg->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_slice_vpintavg.png");
+    // c_slice_vpintavg->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_slice_vpintavg.png");
+    c_slice_vpintavg->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_slice_vpintavg.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_slice_vpintavg.png"));
+    h_slice_vpintavg->Reset();
+
+    TCanvas* c_dt_61_16 = new TCanvas("c_dt_61_16", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_16->SetLogy();
+    c_dt_61_16->cd();
+    h_dt_61_16->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_16->GetYaxis()->SetTitle("Counts");
+    h_dt_61_16->Draw();
+    c_dt_61_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_16.png");
+    // c_dt_61_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_16.png");
+    c_dt_61_16->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_16.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_16.png"));
+    h_dt_61_16->Reset();
+
+    TCanvas* c_dt_61_17 = new TCanvas("c_dt_61_17", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_17->SetLogy();
+    c_dt_61_17->cd();
+    h_dt_61_17->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_17->GetYaxis()->SetTitle("Counts");
+    h_dt_61_17->Draw();
+    c_dt_61_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_17.png");
+    // c_dt_61_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_17.png");
+    c_dt_61_17->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_17.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_17.png"));
+    h_dt_61_17->Reset();
+
+    TCanvas* c_dt_61_18 = new TCanvas("c_dt_61_18", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_18->SetLogy();
+    c_dt_61_18->cd();
+    h_dt_61_18->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_18->GetYaxis()->SetTitle("Counts");
+    h_dt_61_18->Draw();
+    c_dt_61_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_18.png");
+    // c_dt_61_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_18.png");
+    c_dt_61_18->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_18.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_18.png"));
+    h_dt_61_18->Reset();
+
+    TCanvas* c_dt_61_19 = new TCanvas("c_dt_61_19", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_19->SetLogy();
+    c_dt_61_19->cd();
+    h_dt_61_19->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_19->GetYaxis()->SetTitle("Counts");
+    h_dt_61_19->Draw();
+    c_dt_61_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_19.png");
+    // c_dt_61_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_19.png");
+    c_dt_61_19->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_19.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_19.png"));
+    h_dt_61_19->Reset();
+
+    TCanvas* c_dt_61_20 = new TCanvas("c_dt_61_20", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_20->SetLogy();
+    c_dt_61_20->cd();
+    h_dt_61_20->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_20->GetYaxis()->SetTitle("Counts");
+    h_dt_61_20->Draw();
+    c_dt_61_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_20.png");
+    // c_dt_61_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_20.png");
+    c_dt_61_20->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_20.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_20.png"));
+    h_dt_61_20->Reset();
+
+    TCanvas* c_dt_61_21 = new TCanvas("c_dt_61_21", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_21->SetLogy();
+    c_dt_61_21->cd();
+    h_dt_61_21->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_21->GetYaxis()->SetTitle("Counts");
+    h_dt_61_21->Draw();
+    c_dt_61_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_21.png");
+    // c_dt_61_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_21.png");
+    c_dt_61_21->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_21.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_21.png"));
+    h_dt_61_21->Reset();
+
+    TCanvas* c_dt_61_22 = new TCanvas("c_dt_61_22", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_22->SetLogy();
+    c_dt_61_22->cd();
+    h_dt_61_22->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_22->GetYaxis()->SetTitle("Counts");
+    h_dt_61_22->Draw();
+    c_dt_61_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_22.png");
+    // c_dt_61_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_22.png");
+    c_dt_61_22->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_22.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_22.png"));
+    h_dt_61_22->Reset();
+
+    TCanvas* c_dt_61_23 = new TCanvas("c_dt_61_23", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_23->SetLogy();
+    c_dt_61_23->cd();
+    h_dt_61_23->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_23->GetYaxis()->SetTitle("Counts");
+    h_dt_61_23->Draw();
+    c_dt_61_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_23.png");
+    // c_dt_61_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_23.png");
+    c_dt_61_23->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_23.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_23.png"));
+    h_dt_61_23->Reset();
+
+    TCanvas* c_dt_61_top = new TCanvas("c_dt_61_top", "Delta-T Between Event 61 and SiPM Events", 900, 700);
+    // c_dt_61_top->SetLogy();
+    c_dt_61_top->cd();
+    h_dt_61_top->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_dt_61_top->GetYaxis()->SetTitle("Counts");
+    h_dt_61_top->Draw();
+    c_dt_61_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_dt_61_top.png");
+    // c_dt_61_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_dt_61_top.png");
+    c_dt_61_top->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_dt_61_top.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_dt_61_top.png"));
+    h_dt_61_top->Reset();
+
+    TCanvas* c_vpint_16 = new TCanvas("c_vpint_16", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_16->SetLogy();
+    c_vpint_16->cd();
+    h_vpint_16->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_16->GetYaxis()->SetTitle("Counts");
+    h_vpint_16->Draw();
+    c_vpint_16->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_16_%i.png", run));
+    // c_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_16.png");
+    c_vpint_16->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_16.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_16.png"));
+    h_vpint_16->Reset();
+
+    TCanvas* c_vpint_17 = new TCanvas("c_vpint_17", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_17->SetLogy();
+    c_vpint_17->cd();
+    h_vpint_17->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_17->GetYaxis()->SetTitle("Counts");
+    h_vpint_17->Draw();
+    c_vpint_17->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_17_%i.png", run));
+    // c_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_17.png");
+    c_vpint_17->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_17.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_17.png"));
+    h_vpint_17->Reset();
+
+    TCanvas* c_vpint_18 = new TCanvas("c_vpint_18", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_18->SetLogy();
+    c_vpint_18->cd();
+    h_vpint_18->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_18->GetYaxis()->SetTitle("Counts");
+    h_vpint_18->Draw();
+    c_vpint_18->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_18_%i.png", run));
+    // c_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_18.png");
+    c_vpint_18->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_18.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_18.png"));
+    h_vpint_18->Reset();
+
+    TCanvas* c_vpint_19 = new TCanvas("c_vpint_19", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_19->SetLogy();
+    c_vpint_19->cd();
+    h_vpint_19->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_19->GetYaxis()->SetTitle("Counts");
+    h_vpint_19->Draw();
+    c_vpint_19->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_19_%i.png", run));
+    // c_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_19.png");
+    c_vpint_19->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_19.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_19.png"));
+    h_vpint_19->Reset();
+
+    TCanvas* c_vpint_20 = new TCanvas("c_vpint_20", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_20->SetLogy();
+    c_vpint_20->cd();
+    h_vpint_20->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_20->GetYaxis()->SetTitle("Counts");
+    h_vpint_20->Draw();
+    c_vpint_20->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_20_%i.png", run));
+    // c_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_20.png");
+    c_vpint_20->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_20.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_20.png"));
+    h_vpint_20->Reset();
+
+    TCanvas* c_vpint_21 = new TCanvas("c_vpint_21", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_21->SetLogy();
+    c_vpint_21->cd();
+    h_vpint_21->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_21->GetYaxis()->SetTitle("Counts");
+    h_vpint_21->Draw();
+    c_vpint_21->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_21_%i.png", run));
+    // c_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_21.png");
+    c_vpint_21->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_21.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_21.png"));
+    h_vpint_21->Reset();
+
+    TCanvas* c_vpint_22 = new TCanvas("c_vpint_22", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_22->SetLogy();
+    c_vpint_22->cd();
+    h_vpint_22->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_22->GetYaxis()->SetTitle("Counts");
+    h_vpint_22->Draw();
+    c_vpint_22->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_22_%i.png", run));
+    // c_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_22.png");
+    c_vpint_22->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_22.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_22.png"));
+    h_vpint_22->Reset();
+
+    TCanvas* c_vpint_23 = new TCanvas("c_vpint_23", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_23->SetLogy();
+    c_vpint_23->cd();
+    h_vpint_23->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_23->GetYaxis()->SetTitle("Counts");
+    h_vpint_23->Draw();
+    c_vpint_23->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_23_%i.png", run));
+    // c_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_23.png");
+    c_vpint_23->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_23.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_23.png"));
+    h_vpint_23->Reset();
+
+    TCanvas* c_vpint_top = new TCanvas("c_vpint_top", "Event 61 and SiPM dt Integral Values", 900, 700);
+    c_vpint_top->SetLogy();
+    c_vpint_top->cd();
+    h_vpint_top->GetXaxis()->SetTitle("Integral (ADC)");
+    h_vpint_top->GetYaxis()->SetTitle("Counts");
+    h_vpint_top->Draw();
+    c_vpint_top->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_vpint_top_%i.png", run));
+    // c_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_vpint_top.png");
+    c_vpint_top->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_vpint_top.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_vpint_top.png"));
+    h_vpint_top->Reset();
+
+    TCanvas* c_detint_vs_vpint_16 = new TCanvas("c_detint_vs_vpint_16", "SiPM 1 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_16->SetLogy();
+    // c_detint_vs_vpint_16->SetLogx();
+    c_detint_vs_vpint_16->cd();
+    h_detint_vs_vpint_16->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_16->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_16->Draw();
+    c_detint_vs_vpint_16->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_16.png");
+    // c_detint_vs_vpint_16->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_16.png");
+    c_detint_vs_vpint_16->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_16.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_16.png"));
+    h_detint_vs_vpint_16->Reset();
+
+    TCanvas* c_detint_vs_vpint_17 = new TCanvas("c_detint_vs_vpint_17", "SiPM 2 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_17->SetLogy();
+    // c_detint_vs_vpint_17->SetLogx();
+    c_detint_vs_vpint_17->cd();
+    h_detint_vs_vpint_17->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_17->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_17->Draw();
+    c_detint_vs_vpint_17->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_17.png");
+    // c_detint_vs_vpint_17->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_17.png");
+    c_detint_vs_vpint_17->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_17.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_17.png"));
+    h_detint_vs_vpint_17->Reset();
+
+    TCanvas* c_detint_vs_vpint_18 = new TCanvas("c_detint_vs_vpint_18", "SiPM 3 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_18->SetLogy();
+    // c_detint_vs_vpint_18->SetLogx();
+    c_detint_vs_vpint_18->cd();
+    h_detint_vs_vpint_18->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_18->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_18->Draw();
+    c_detint_vs_vpint_18->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_18.png");
+    // c_detint_vs_vpint_18->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_18.png");
+    c_detint_vs_vpint_18->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_18.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_18.png"));
+    h_detint_vs_vpint_18->Reset();
+
+    TCanvas* c_detint_vs_vpint_19 = new TCanvas("c_detint_vs_vpint_19", "SiPM 4 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_19->SetLogy();
+    // c_detint_vs_vpint_19->SetLogx();
+    c_detint_vs_vpint_19->cd();
+    h_detint_vs_vpint_19->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_19->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_19->Draw();
+    c_detint_vs_vpint_19->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_19.png");
+    // c_detint_vs_vpint_19->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_19.png");
+    c_detint_vs_vpint_19->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_19.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_19.png"));
+    h_detint_vs_vpint_19->Reset();
+
+    TCanvas* c_detint_vs_vpint_20 = new TCanvas("c_detint_vs_vpint_20", "SiPM 5 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_20->SetLogy();
+    // c_detint_vs_vpint_20->SetLogx();
+    c_detint_vs_vpint_20->cd();
+    h_detint_vs_vpint_20->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_20->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_20->Draw();
+    c_detint_vs_vpint_20->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_20.png");
+    // c_detint_vs_vpint_20->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_20.png");
+    c_detint_vs_vpint_20->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_20.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_20.png"));
+    h_detint_vs_vpint_20->Reset();
+
+    TCanvas* c_detint_vs_vpint_21 = new TCanvas("c_detint_vs_vpint_21", "SiPM 6 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_21->SetLogy();
+    // c_detint_vs_vpint_21->SetLogx();
+    c_detint_vs_vpint_21->cd();
+    h_detint_vs_vpint_21->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_21->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_21->Draw();
+    c_detint_vs_vpint_21->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_21.png");
+    // c_detint_vs_vpint_21->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_21.png");
+    c_detint_vs_vpint_21->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_21.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_21.png"));
+    h_detint_vs_vpint_21->Reset();
+
+    TCanvas* c_detint_vs_vpint_22 = new TCanvas("c_detint_vs_vpint_22", "SiPM 7 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_22->SetLogy();
+    // c_detint_vs_vpint_22->SetLogx();
+    c_detint_vs_vpint_22->cd();
+    h_detint_vs_vpint_22->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_22->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_22->Draw();
+    c_detint_vs_vpint_22->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_22.png");
+    // c_detint_vs_vpint_22->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_22.png");
+    c_detint_vs_vpint_22->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_22.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_22.png"));
+    h_detint_vs_vpint_22->Reset();
+
+    TCanvas* c_detint_vs_vpint_23 = new TCanvas("c_detint_vs_vpint_23", "SiPM 8 & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_23->SetLogy();
+    // c_detint_vs_vpint_23->SetLogx();
+    c_detint_vs_vpint_23->cd();
+    h_detint_vs_vpint_23->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_23->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_23->Draw();
+    c_detint_vs_vpint_23->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_23.png");
+    // c_detint_vs_vpint_23->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_23.png");
+    c_detint_vs_vpint_23->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_23.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_23.png"));
+    h_detint_vs_vpint_23->Reset();
+
+    TCanvas* c_detint_vs_vpint_top = new TCanvas("c_detint_vs_vpint_top", "Top SiPM & PMT Integral Values", 900, 700);
+    c_detint_vs_vpint_top->SetLogy();
+    // c_detint_vs_vpint_top->SetLogx();
+    c_detint_vs_vpint_top->cd();
+    h_detint_vs_vpint_top->GetXaxis()->SetTitle("PMT Integral (Ph.e.)");
+    h_detint_vs_vpint_top->GetYaxis()->SetTitle("SiPM Integral (ADC)");
+    h_detint_vs_vpint_top->Draw();
+    c_detint_vs_vpint_top->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_detint_vs_vpint_top.png");
+    // c_detint_vs_vpint_top->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_top.png");
+    c_detint_vs_vpint_top->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_detint_vs_vpint_top.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_detint_vs_vpint_top.png"));
+    h_detint_vs_vpint_top->Reset();
+
+    TCanvas* c_tB = new TCanvas("c_tB", "TriggerBits Distribution", 1200, 700);
+    c_tB->SetLogy();
+    c_tB->cd();
+    h_tB->GetXaxis()->SetTitle("triggerBits Value");
+    h_tB->GetYaxis()->SetTitle("Counts");
+    h_tB->Draw();
+    c_tB->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_tB_%i.png", run));
+    c_tB->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_tB.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_tB.png"));
+    h_tB->Reset();
+
+    TCanvas* c_blM_pmt = new TCanvas("c_blM_pmt", "PMT baselineMean Distribution", 1200, 700);
+    c_blM_pmt->SetLogy();
+    c_blM_pmt->cd();
+    h_blM_pmt->GetXaxis()->SetTitle("baselineMean Value");
+    h_blM_pmt->GetYaxis()->SetTitle("Counts");
+    h_blM_pmt->Draw();
+    c_blM_pmt->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_blM_pmt.png");
+    c_blM_pmt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_pmt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_blM_pmt.png"));
+    h_blM_pmt->Reset();
+
+    TCanvas* c_blM_vp = new TCanvas("c_blM_vp", "SiPM baselineMean Distribution", 1200, 700);
+    c_blM_vp->SetLogy();
+    c_blM_vp->cd();
+    h_blM_vp->GetXaxis()->SetTitle("baselineMean Value");
+    h_blM_vp->GetYaxis()->SetTitle("Counts");
+    h_blM_vp->Draw();
+    c_blM_vp->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_blM_vp.png");
+    c_blM_vp->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_vp.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_blM_vp.png"));
+    h_blM_vp->Reset();
+
+    TCanvas* c_blM_ev61 = new TCanvas("c_blM_ev61", "Event 61 baselineMean Distribution", 1200, 700);
+    c_blM_ev61->SetLogy();
+    c_blM_ev61->cd();
+    h_blM_ev61->GetXaxis()->SetTitle("baselineMean Value");
+    h_blM_ev61->GetYaxis()->SetTitle("Counts");
+    h_blM_ev61->Draw();
+    c_blM_ev61->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_blM_ev61.png");
+    c_blM_ev61->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_blM_ev61.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_blM_ev61.png"));
+    h_blM_ev61->Reset();
+
+    TCanvas* c_intev61 = new TCanvas("c_intev61", "Distribution of Event 61 Integral Values", 1200, 700);
+    c_intev61->SetLogy();
+    c_intev61->cd();
+    h_intev61->GetXaxis()->SetTitle("Integral (ADC)");
+    h_intev61->GetYaxis()->SetTitle("Counts");
+    h_intev61->Draw();
+    c_intev61->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intev61_%i.png", run));
+    c_intev61->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intev61.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intev61.png"));
+    h_intev61->Reset();
+
+    TCanvas* c_intev61chan = new TCanvas("c_intev61chan", "Distribution of Event 61 Channel Integral Values", 1200, 700);
+    c_intev61chan->SetLogy();
+    c_intev61chan->cd();
+    h_intev61chan->GetXaxis()->SetTitle("Integral (ADC)");
+    h_intev61chan->GetYaxis()->SetTitle("Counts");
+    h_intev61chan->Draw();
+    c_intev61chan->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intev61chan_%i.png", run));
+    c_intev61chan->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intev61chan.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intev61chan.png"));
+    h_intev61chan->Reset();
+
+    TCanvas* c_areaev61chan = new TCanvas("c_areaev61chan", "Distribution of Event 61 Channel Area Values", 1200, 700);
+    c_areaev61chan->SetLogy();
+    c_areaev61chan->cd();
+    h_areaev61chan->GetXaxis()->SetTitle("Integral (ADC)");
+    h_areaev61chan->GetYaxis()->SetTitle("Counts");
+    h_areaev61chan->Draw();
+    c_areaev61chan->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_areaev61chan_%i.png", run));
+    c_areaev61chan->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_areaev61chan.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_areaev61chan.png"));
+    h_areaev61chan->Reset();
+
+    h_intmichels_PMT0->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT0->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT0->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT0_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT0.png"));
+    h_intmichels_PMT0->Reset();
+
+    h_intmichels_PMT1->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT1->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT1->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT1_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT1.png"));
+    h_intmichels_PMT1->Reset();
+
+    h_intmichels_PMT2->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT2->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT2->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT2_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT2.png"));
+    h_intmichels_PMT2->Reset();
+
+    h_intmichels_PMT3->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT3->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT3->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT3_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT3.png"));
+    h_intmichels_PMT3->Reset();
+
+    h_intmichels_PMT4->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT4->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT4->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT4_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT4.png"));
+    h_intmichels_PMT4->Reset();
+
+    h_intmichels_PMT5->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT5->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT5->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT5_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT5.png"));
+    h_intmichels_PMT5->Reset();
+
+    h_intmichels_PMT6->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT6->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT6->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT6_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT6.png"));
+    h_intmichels_PMT6->Reset();
+
+    h_intmichels_PMT7->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT7->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT7->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT7_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT7.png"));
+    h_intmichels_PMT7->Reset();
+
+    h_intmichels_PMT8->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT8->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT8->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT8_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT8.png"));
+    h_intmichels_PMT8->Reset();
+
+    h_intmichels_PMT9->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT9->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT9->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT9_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT9.png"));
+    h_intmichels_PMT9->Reset();
+
+    h_intmichels_PMT10->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT10->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT10->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT10_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT10.png"));
+    h_intmichels_PMT10->Reset();
+
+    h_intmichels_PMT11->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_PMT11->GetYaxis()->SetTitle("Counts");
+    h_intmichels_PMT11->Draw();
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_PMT11_%i.png", run));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_PMT11.png"));
+    h_intmichels_PMT11->Reset();
+
+    TCanvas* c_intmichels_F25 = new TCanvas("c_intmichels_F25", "Michel Electron Integral Values", 1200, 700);
+    // c_intmichels_F25->SetLogy();
+    c_intmichels_F25->cd();
+    h_intmichels_F25->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_intmichels_F25->GetYaxis()->SetTitle("Counts");
+    h_intmichels_S26->Draw("same");
+    h_intmichels_S26->SetLineColor(kGreen);
+    h_intmichels_F25->Draw("same");
+    h_intmichels_F25->SetLineColor(kBlue);
+    h_intmichels_S25->Draw("same");
+    h_intmichels_S25->SetLineColor(kRed);
+    TLegend *leg_intmichels_F25 = new TLegend(0.9, 0.65, 0.65, 0.45);
+    leg_intmichels_F25->AddEntry(h_intmichels_S25, "Spring 2025", "l");
+    leg_intmichels_F25->AddEntry(h_intmichels_F25, "Fall 2025", "l");
+    leg_intmichels_F25->AddEntry(h_intmichels_S26, "Spring 2026", "l");
+    leg_intmichels_F25->Draw();
+    c_intmichels_F25->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_3days_%i.png", run));
+    // c_intmichels_F25->SaveAs("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_intmichels_3days.png");
+    c_intmichels_F25->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intmichels_3days.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intmichels_3days.png"));
+    h_intmichels_F25->Reset();
 
     TCanvas* c_time_bt_ev61 = new TCanvas("c_time_bt_ev61", "Time Between Event 61 Peaks", 1200, 700);
     c_time_bt_ev61->SetLogy();
@@ -4552,10 +3872,10 @@ int main(int argc, char *argv[])
     h_time_bt_ev61->GetXaxis()->SetTitle("Delta-T (ns)");
     h_time_bt_ev61->GetYaxis()->SetTitle("Counts");
     h_time_bt_ev61->Draw();
-    c_time_bt_ev61->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_time_bt_ev61.png");
+    c_time_bt_ev61->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_time_bt_ev61.png");
     c_time_bt_ev61->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_time_bt_ev61.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_time_bt_ev61.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_time_bt_ev61.png"));
     h_time_bt_ev61->Reset();
 
     TCanvas* c_time_bt_minLED = new TCanvas("c_time_bt_minLED", "Time Between Min Bias Peaks", 1200, 700);
@@ -4564,10 +3884,10 @@ int main(int argc, char *argv[])
     h_time_bt_minLED->GetXaxis()->SetTitle("Delta-T (ns)");
     h_time_bt_minLED->GetYaxis()->SetTitle("Counts");
     h_time_bt_minLED->Draw();
-    c_time_bt_minLED->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_time_bt_minLED.png");
+    c_time_bt_minLED->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_time_bt_minLED.png");
     c_time_bt_minLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_time_bt_minLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_time_bt_minLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_time_bt_minLED.png"));
     h_time_bt_minLED->Reset();
 
     TCanvas* c_time_bt_lowLED = new TCanvas("c_time_bt_lowLED", "Time Between Low Light Peaks", 1200, 700);
@@ -4576,10 +3896,10 @@ int main(int argc, char *argv[])
     h_time_bt_lowLED->GetXaxis()->SetTitle("Delta-T (ns)");
     h_time_bt_lowLED->GetYaxis()->SetTitle("Counts");
     h_time_bt_lowLED->Draw();
-    c_time_bt_lowLED->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_time_bt_lowLED.png");
+    c_time_bt_lowLED->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_time_bt_lowLED.png");
     c_time_bt_lowLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_time_bt_lowLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_time_bt_lowLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_time_bt_lowLED.png"));
     h_time_bt_lowLED->Reset();
 
     TCanvas* c_time_bt_highLED = new TCanvas("c_time_bt_highLED", "Time Between High Light Peaks", 1200, 700);
@@ -4588,10 +3908,10 @@ int main(int argc, char *argv[])
     h_time_bt_highLED->GetXaxis()->SetTitle("Delta-T (ns)");
     h_time_bt_highLED->GetYaxis()->SetTitle("Counts");
     h_time_bt_highLED->Draw();
-    c_time_bt_highLED->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_time_bt_highLED.png");
+    c_time_bt_highLED->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_time_bt_highLED.png");
     c_time_bt_highLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_time_bt_highLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_time_bt_highLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_time_bt_highLED.png"));
     h_time_bt_highLED->Reset();
 
     TCanvas* c_intall = new TCanvas("c_intall", "All Integral Values", 1200, 700);
@@ -4605,10 +3925,10 @@ int main(int argc, char *argv[])
     lat_intall->SetTextColor(1);
     lat_intall->SetTextSize(0.035);
     lat_intall->Draw();
-    c_intall->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intall.png");
+    c_intall->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intall.png");
     c_intall->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intall.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intall.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intall.png"));
     h_intall->Reset();
 
     TCanvas* c_intlowLED = new TCanvas("c_intlowLED", "Low Light LED Integral Values", 1200, 700);
@@ -4622,10 +3942,10 @@ int main(int argc, char *argv[])
     lat_intlowLED->SetTextColor(1);
     lat_intlowLED->SetTextSize(0.035);
     lat_intlowLED->Draw();
-    c_intlowLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intlowLED_%i.png", run));
+    c_intlowLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intlowLED_%i.png", run));
     c_intlowLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intlowLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intlowLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intlowLED.png"));
     h_intlowLED->Reset();
 
     TCanvas* c_inthighLED = new TCanvas("c_inthighLED", "High Light LED Integral Values", 1200, 700);
@@ -4639,10 +3959,10 @@ int main(int argc, char *argv[])
     lat_inthighLED->SetTextColor(1);
     lat_inthighLED->SetTextSize(0.035);
     lat_inthighLED->Draw();
-    c_inthighLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_inthighLED_%i.png", run));
+    c_inthighLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_inthighLED_%i.png", run));
     c_inthighLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_inthighLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_inthighLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_inthighLED.png"));
     h_inthighLED->Reset();
 
     TCanvas* c_intminLED = new TCanvas("c_intminLED", "Min Bias LED Integral Values", 1200, 700);
@@ -4656,10 +3976,10 @@ int main(int argc, char *argv[])
     lat_intminLED->SetTextColor(1);
     lat_intminLED->SetTextSize(0.035);
     lat_intminLED->Draw();
-    c_intminLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intminLED_%i.png", run));
+    c_intminLED->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intminLED_%i.png", run));
     c_intminLED->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intminLED.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intminLED.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intminLED.png"));
     h_intminLED->Reset();
 
     TCanvas* c_MB_HL_dt = new TCanvas("c_MB_HL_dt", "MB-HL dt Values", 1200, 700);
@@ -4668,10 +3988,10 @@ int main(int argc, char *argv[])
     h_MB_HL_dt->GetXaxis()->SetTitle("Delta-T (ns)");
     h_MB_HL_dt->GetYaxis()->SetTitle("Counts");
     h_MB_HL_dt->Draw();
-    c_MB_HL_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_MB_HL_dt_%i.png", run));
+    c_MB_HL_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_MB_HL_dt_%i.png", run));
     c_MB_HL_dt->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_MB_HL_dt.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_MB_HL_dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_MB_HL_dt.png"));
     h_MB_HL_dt->Reset();
 
     TCanvas* c_intallint = new TCanvas("c_intallint", "All Internally Triggered Integral Values", 1200, 700);
@@ -4685,10 +4005,10 @@ int main(int argc, char *argv[])
     lat_intallint->SetTextColor(1);
     lat_intallint->SetTextSize(0.035);
     lat_intallint->Draw();
-    c_intallint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_intallint.png");
+    c_intallint->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intallint.png");
     c_intallint->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_intallint.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_intallint.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intallint.png"));
     h_intallint->Reset();
 
     TCanvas* c_intallmultcut = new TCanvas("c_intallmultcut", "All Internally Triggered Integral Values, Multiplicity Cut", 1200, 700);
@@ -4725,6 +4045,146 @@ int main(int argc, char *argv[])
     // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intallmultmuoncut.png"));
     h_intallmultmuoncut->Reset();
 
+    TCanvas* c_sec_interval = new TCanvas("c_sec_interval", "Event 61 Time Separation", 1200, 700);
+    c_sec_interval->SetLogy();
+    c_sec_interval->cd();
+    h_sec_interval->GetXaxis()->SetTitle("Time (ms)");
+    h_sec_interval->GetYaxis()->SetTitle("Counts");
+    // h_sec_interval->GetYaxis()->SetRange(0, 50);
+    h_sec_interval->Draw();
+    c_sec_interval->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sec_interval_%i.png", runnum));
+    // c_sec_interval->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_sec_interval_%i.png", runnum));
+    c_sec_interval->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_sec_interval.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sec_interval.png"));
+    h_sec_interval->Reset();
+
+    TCanvas* c_sec_ev61_count = new TCanvas("c_sec_ev61_count", "Event 61 Count Per Second", 1200, 700);
+    c_sec_ev61_count->SetLogy();
+    c_sec_ev61_count->cd();
+    h_sec_ev61_count->GetXaxis()->SetTitle("Event 61 Count");
+    h_sec_ev61_count->GetYaxis()->SetTitle("Counts");
+    // h_sec_ev61_count->GetYaxis()->SetRange(0, 50);
+    h_sec_ev61_count->Draw();
+    c_sec_ev61_count->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sec_ev61_count_%i.png", runnum));
+    // c_sec_ev61_count->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_sec_ev61_count_%i.png", runnum));
+    c_sec_ev61_count->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_sec_ev61_count.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sec_ev61_count.png"));
+    h_sec_ev61_count->Reset();
+
+    TCanvas* c_ev61_rate_vs_avg_int = new TCanvas("c_ev61_rate_vs_avg_int", "Event 61 Rate vs Int", 1200, 700);
+    // c_ev61_rate_vs_avg_int->SetLogy();
+    c_ev61_rate_vs_avg_int->cd();
+    h_ev61_rate_vs_avg_int->GetXaxis()->SetTitle("Event 61 Per Second");
+    h_ev61_rate_vs_avg_int->GetYaxis()->SetTitle("Average Integral (ADC)");
+    // h_ev61_rate_vs_avg_int->GetYaxis()->SetRange(0, 50);
+    h_ev61_rate_vs_avg_int->Draw();
+    c_ev61_rate_vs_avg_int->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61_rate_vs_avg_int_%i.png", runnum));
+    // c_ev61_rate_vs_avg_int->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61_rate_vs_avg_int_%i.png", runnum));
+    c_ev61_rate_vs_avg_int->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_rate_vs_avg_int.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_rate_vs_avg_int.png"));
+    h_ev61_rate_vs_avg_int->Reset();
+
+    TCanvas* c_ev61_interval_integral = new TCanvas("c_ev61_interval_integral", "Event 61 Channel Integral", 1200, 700);
+    c_ev61_interval_integral->SetLogy();
+    c_ev61_interval_integral->cd();
+    h_ev61_interval_integral->GetXaxis()->SetTitle("Integral (ADC)");
+    h_ev61_interval_integral->GetYaxis()->SetTitle("Counts");
+    // h_ev61_interval_integral->GetYaxis()->SetRange(0, 50);
+    h_ev61_interval_integral->Draw();
+    c_ev61_interval_integral->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61_interval_integral_%i.png", runnum));
+    // c_ev61_interval_integral->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61_interval_integral_%i.png", runnum));
+    c_ev61_interval_integral->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_interval_integral.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_interval_integral.png"));
+    h_ev61_interval_integral->Reset();
+
+    TCanvas* c_ev61_interval_dt = new TCanvas("c_ev61_interval_dt", "Event 61 Channel dt", 1200, 700);
+    c_ev61_interval_dt->SetLogy();
+    c_ev61_interval_dt->cd();
+    h_ev61_interval_dt->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_ev61_interval_dt->GetYaxis()->SetTitle("Counts");
+    // h_ev61_interval_dt->GetYaxis()->SetRange(0, 50);
+    h_ev61_interval_dt->Draw();
+    c_ev61_interval_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61_interval_dt_%i.png", runnum));
+    // c_ev61_interval_dt->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61_interval_dt_%i.png", runnum));
+    c_ev61_interval_dt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61_interval_dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61_interval_dt.png"));
+    h_ev61_interval_dt->Reset();
+
+    TCanvas* c_hl_interval_integral = new TCanvas("c_hl_interval_integral", "Event 61 Channel Integral", 1200, 700);
+    c_hl_interval_integral->SetLogy();
+    c_hl_interval_integral->cd();
+    h_hl_interval_integral->GetXaxis()->SetTitle("Integral (ADC)");
+    h_hl_interval_integral->GetYaxis()->SetTitle("Counts");
+    // h_hl_interval_integral->GetYaxis()->SetRange(0, 50);
+    h_hl_interval_integral->Draw();
+    c_hl_interval_integral->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_hl_interval_integral_%i.png", runnum));
+    // c_hl_interval_integral->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_hl_interval_integral_%i.png", runnum));
+    c_hl_interval_integral->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_hl_interval_integral.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_hl_interval_integral.png"));
+    h_hl_interval_integral->Reset();
+
+    TCanvas* c_hl_interval_dt = new TCanvas("c_hl_interval_dt", "Event 61 Channel dt", 1200, 700);
+    c_hl_interval_dt->SetLogy();
+    c_hl_interval_dt->cd();
+    h_hl_interval_dt->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_hl_interval_dt->GetYaxis()->SetTitle("Counts");
+    // h_hl_interval_dt->GetYaxis()->SetRange(0, 50);
+    h_hl_interval_dt->Draw();
+    c_hl_interval_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_hl_interval_dt_%i.png", runnum));
+    // c_hl_interval_dt->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_hl_interval_dt_%i.png", runnum));
+    c_hl_interval_dt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_hl_interval_dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_hl_interval_dt.png"));
+    h_hl_interval_dt->Reset();
+
+    TCanvas* c_ll_interval_integral = new TCanvas("c_ll_interval_integral", "Event 61 Channel Integral", 1200, 700);
+    c_ll_interval_integral->SetLogy();
+    c_ll_interval_integral->cd();
+    h_ll_interval_integral->GetXaxis()->SetTitle("Integral (ADC)");
+    h_ll_interval_integral->GetYaxis()->SetTitle("Counts");
+    // h_ll_interval_integral->GetYaxis()->SetRange(0, 50);
+    h_ll_interval_integral->Draw();
+    c_ll_interval_integral->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ll_interval_integral_%i.png", runnum));
+    // c_ll_interval_integral->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ll_interval_integral_%i.png", runnum));
+    c_ll_interval_integral->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ll_interval_integral.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ll_interval_integral.png"));
+    h_ll_interval_integral->Reset();
+
+    TCanvas* c_ll_interval_dt = new TCanvas("c_ll_interval_dt", "Event 61 Channel dt", 1200, 700);
+    c_ll_interval_dt->SetLogy();
+    c_ll_interval_dt->cd();
+    h_ll_interval_dt->GetXaxis()->SetTitle("Delta-T (ns)");
+    h_ll_interval_dt->GetYaxis()->SetTitle("Counts");
+    // h_ll_interval_dt->GetYaxis()->SetRange(0, 50);
+    h_ll_interval_dt->Draw();
+    c_ll_interval_dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ll_interval_dt_%i.png", runnum));
+    // c_ll_interval_dt->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ll_interval_dt_%i.png", runnum));
+    c_ll_interval_dt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ll_interval_dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ll_interval_dt.png"));
+    h_ll_interval_dt->Reset();
+
+    TCanvas* c_ev61dt = new TCanvas("c_ev61dt", "Event 61 dt", 1200, 700);
+    c_ev61dt->SetLogy();
+    c_ev61dt->cd();
+    h_ev61dt->GetXaxis()->SetTitle("Time (ms)");
+    h_ev61dt->GetYaxis()->SetTitle("Counts");
+    // h_ev61dt->GetYaxis()->SetRange(0, 50);
+    h_ev61dt->Draw();
+    c_ev61dt->SaveAs(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ev61dt_%i.png", runnum));
+    // c_ev61dt->SaveAs(Form("/mnt/c/Users/eliwa/OneDrive/Documents/Detector_Data_Analysis/plots/h_ev61dt_%i.png", runnum));
+    c_ev61dt->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ev61dt.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ev61dt.png"));
+    h_ev61dt->Reset();
+
     auto p_vpeff = new TGraph();
     p_vpeff->SetTitle("Efficiency of Top Veto Panel as a Function of Top Veto Panel Energy Cuts");
     p_vpeff->GetXaxis()->SetTitle("Top Veto Panel Integral Threshold (ADC)");
@@ -4735,8 +4195,28 @@ int main(int argc, char *argv[])
     p_vpeff->AddPoint(700, 0.9653);         // 7390/7656
     p_vpeff->AddPoint(800, 0.9070);         // 6944/7656
     p_vpeff->Draw("AL*");
-    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/p_vpeff.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/p_vpeff.png"));
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/p_vpeff_%i.png", runnum));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/p_vpeff_%i.png", runnum));
+
+    p_ev61_per_sec->SetTitle("Number of Event 61 Peaks per Second");
+    p_ev61_per_sec->GetXaxis()->SetTitle("Unix Time (seconds)");
+    p_ev61_per_sec->GetYaxis()->SetTitle("Number of Event 61 Peaks");
+    p_ev61_per_sec->Draw("A*");
+    // p_ev61_per_sec->GetXaxis()->SetLimits(2600, 3600);
+    // p_ev61_per_sec->SetMinimum(50);
+    // p_ev61_per_sec->SetMaximum(75);
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/p_ev61_per_sec_%i.png", runnum));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/p_ev61_per_sec_%i.png", runnum));
+
+    p_hl_per_sec->SetTitle("Number of High Light LED Events per Second");
+    p_hl_per_sec->GetXaxis()->SetTitle("Unix Time (seconds)");
+    p_hl_per_sec->GetYaxis()->SetTitle("Number of High Light Peaks");
+    p_hl_per_sec->Draw("A*");
+    // p_hl_per_sec->GetXaxis()->SetLimits(2600, 3600);
+    // p_hl_per_sec->SetMinimum(50);
+    // p_hl_per_sec->SetMaximum(75);
+    gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/p_hl_per_sec_%i.png", runnum));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/p_hl_per_sec_%i.png", runnum));
 
     TCanvas* c_amp = new TCanvas("c_amp", "Distribution of All Event Amplitude Values", 1200, 700);
     c_amp->SetLogy();
@@ -4971,11 +4451,47 @@ int main(int argc, char *argv[])
     h_tvp_int->GetXaxis()->SetTitle("Integral (ADC)");
     h_tvp_int->GetYaxis()->SetTitle("Counts");
     h_tvp_int->Draw();
-    c_tvp_int->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_tvp_int.png");
+    c_tvp_int->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intTVP.png");
     c_tvp_int->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_tvp_int.png"));
     // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_tvp_int.png"));
     h_tvp_int->Reset();
+
+    TCanvas* c_svp_int = new TCanvas("c_svp_int", "Distribution of Side Veto Panel Integral Values", 1200, 700);
+    c_svp_int->SetLogy();
+    c_svp_int->cd();
+    h_svp_int->GetXaxis()->SetTitle("Integral (ADC)");
+    h_svp_int->GetYaxis()->SetTitle("Counts");
+    h_svp_int->Draw();
+    c_svp_int->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_intSVP.png");
+    c_svp_int->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_svp_int.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_svp_int.png"));
+    h_svp_int->Reset();
+
+    TCanvas* c_pmt_int_LE = new TCanvas("c_pmt_int_LE", "Low Energy PMT Events", 1200, 700);
+    c_pmt_int_LE->SetLogy();
+    c_pmt_int_LE->cd();
+    h_pmt_int_LE->GetXaxis()->SetTitle("Integral (Ph.e.)");
+    h_pmt_int_LE->GetYaxis()->SetTitle("Counts");
+    h_pmt_int_LE->Draw();
+    c_pmt_int_LE->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_pmt_int_LE.png");
+    c_pmt_int_LE->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_pmt_int_LE.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_pmt_int_LE.png"));
+    h_pmt_int_LE->Reset();
+
+    TCanvas* c_pmt_LP_LE = new TCanvas("c_pmt_LP_LE", "Low Energy PMT Peaks", 1200, 700);
+    c_pmt_LP_LE->SetLogy();
+    c_pmt_LP_LE->cd();
+    h_pmt_LP_LE->GetXaxis()->SetTitle("Amplitude (ADC)");
+    h_pmt_LP_LE->GetYaxis()->SetTitle("Counts");
+    h_pmt_LP_LE->Draw();
+    c_pmt_LP_LE->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_pmt_LP_LE.png");
+    c_pmt_LP_LE->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_pmt_LP_LE.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_pmt_LP_LE.png"));
+    h_pmt_LP_LE->Reset();
 
     /*TCanvas* c_intneu = new TCanvas("c_intneu", "Distribution of Beam On Event Integral Values", 1200, 700);
     c_intneu->SetLogy();
@@ -4989,8 +4505,20 @@ int main(int argc, char *argv[])
     // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_intneu.png"));
     h_intneu->Reset();*/
 
+    TCanvas* c_spheMB = new TCanvas("c_spheMB", "Single Channel Min Bias Integral Values", 1200, 700);
+    // c_spheMB->SetLogy();
+    c_spheMB->cd();
+    h_spheMB->GetXaxis()->SetTitle("Integral (ADC)");
+    h_spheMB->GetYaxis()->SetTitle("Counts");
+    h_spheMB->Draw();
+    c_spheMB->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_spheMB.png");
+    c_spheMB->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_spheMB.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_spheMB.png"));
+    h_spheMB->Reset();
+
     TCanvas* c_spheLL = new TCanvas("c_spheLL", "Single Channel Low Light Integral Values", 1200, 700);
-    c_spheLL->SetLogy();
+    // c_spheLL->SetLogy();
     c_spheLL->cd();
     h_spheLL->GetXaxis()->SetTitle("Integral (ADC)");
     h_spheLL->GetYaxis()->SetTitle("Counts");
@@ -5001,17 +4529,24 @@ int main(int argc, char *argv[])
     // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_spheLL.png"));
     h_spheLL->Reset();
 
-    TCanvas* c_spheMB = new TCanvas("c_spheMB", "Single Channel Min Bias Integral Values", 1200, 700);
-    c_spheMB->SetLogy();
-    c_spheMB->cd();
-    h_spheMB->GetXaxis()->SetTitle("Integral (ADC)");
-    h_spheMB->GetYaxis()->SetTitle("Counts");
-    h_spheMB->Draw();
-    c_spheMB->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_spheMB.png");
-    c_spheMB->Close();
-    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_spheMB.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_spheMB.png"));
-    h_spheMB->Reset();
+    TCanvas* c_sphe_largest_peak = new TCanvas("c_sphe_largest_peak", "SPHE Largest Peak", 1200, 700);
+    // c_sphe_largest_peak->SetLogy();
+    c_sphe_largest_peak->cd();
+    h_sphe_largest_peak->GetXaxis()->SetTitle("Amplitude (ADC)");
+    h_sphe_largest_peak->GetYaxis()->SetTitle("Counts");
+    h_sphe_largest_peak->Draw();
+    TF1* gauss = new TF1("gauss", "gaus", 45, 90);
+    h_sphe_largest_peak->Fit(gauss, "Q");
+    TLatex* latex_sphe_lp = new TLatex();
+    latex_sphe_lp->SetNDC();
+    latex_sphe_lp->SetTextSize(0.04);
+    latex_sphe_lp->DrawLatex(0.15, 0.85, Form("Mean = %.2f", gauss->GetParameter(1)));
+    latex_sphe_lp->DrawLatex(0.15, 0.80, Form("Sigma = %.2f", gauss->GetParameter(2)));
+    c_sphe_largest_peak->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_sphe_largest_peak.png");
+    c_sphe_largest_peak->Close();
+    // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_sphe_largest_peak.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_sphe_largest_peak.png"));
+    h_sphe_largest_peak->Reset();
 
     TCanvas* c_ampOnOff = new TCanvas("c_ampOnOff", "Peak Amplitudes with SNS Beam On vs Off", 1200, 700);
     // c_ampOnOff->SetLogy();
@@ -5129,10 +4664,10 @@ int main(int argc, char *argv[])
     h_ml->GetXaxis()->SetTitle("Number of Channels a Peak was Found in");
     h_ml->GetYaxis()->SetTitle("Counts");
     h_ml->Draw();
-    c_ml->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_ml.png");
+    c_ml->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ml.png");
     c_ml->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ml.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_ml.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ml.png"));
     h_ml->Reset();
 
     TCanvas* c_ml_v_int = new TCanvas("c_ml_v_int", "Multiplicity vs Integral Distribution", 1200, 700);
@@ -5141,10 +4676,10 @@ int main(int argc, char *argv[])
     h_ml_v_int->GetXaxis()->SetTitle("Number of Channels a Peak was Found in");
     h_ml_v_int->GetYaxis()->SetTitle("Integral (Ph.e.)");
     h_ml_v_int->Draw();
-    c_ml_v_int->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots7894/h_ml_v_int.png");
+    c_ml_v_int->SaveAs("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/plots/h_ml_v_int.png");
     c_ml_v_int->Close();
     // gPad->Print(Form("/data7/coherent/data/d2o/emward/Detector_Data_Analysis/h_ml_v_int.png"));
-    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots7894/h_ml_v_int.png"));
+    // gPad->Print(Form("/mnt/c/Users/eliwa/Documents/Detector_Data_Analysis/plots/h_ml_v_int.png"));
     h_ml_v_int->Reset();
 
     h_dtint->GetXaxis()->SetTitle("Delta-T (ns)");
@@ -5277,17 +4812,17 @@ int main(int argc, char *argv[])
 
     // double veto_det_ratio_10 = num_veto_found_10 * pow(num_large_found_10, -1);
 
-    cout << "\n" << "1-200 ph.e.:     num_veto_found_1 / num_large_found_1 = " << num_veto_found_1 << " / " << num_large_found_1 << " = " << veto_det_ratio_1 << endl;
+    cout << "\n" << "Center run " << hour12_run << " 1-200 ph.e.:     num_veto_found_1 / num_large_found_1 = " << num_veto_found_1 << " / " << num_large_found_1 << " = " << veto_det_ratio_1 << endl;
     
-    cout << "\n" << "201-400 ph.e.:   num_veto_found_2 / num_large_found_2 = " << num_veto_found_2 << " / " << num_large_found_2 << " = " << veto_det_ratio_2 << endl;
+    cout << "\n" << "Center run " << hour12_run << " 201-400 ph.e.:   num_veto_found_2 / num_large_found_2 = " << num_veto_found_2 << " / " << num_large_found_2 << " = " << veto_det_ratio_2 << endl;
 
-    cout << "\n" << "401-600 ph.e.:   num_veto_found_3 / num_large_found_3 = " << num_veto_found_3 << " / " << num_large_found_3 << " = " << veto_det_ratio_3 << endl;
+    cout << "\n" << "Center run " << hour12_run << " 401-600 ph.e.:   num_veto_found_3 / num_large_found_3 = " << num_veto_found_3 << " / " << num_large_found_3 << " = " << veto_det_ratio_3 << endl;
 
-    cout << "\n" << "601-800 ph.e.:   num_veto_found_4 / num_large_found_4 = " << num_veto_found_4 << " / " << num_large_found_4 << " = " << veto_det_ratio_4 << endl;
+    cout << "\n" << "Center run " << hour12_run << " 601-800 ph.e.:   num_veto_found_4 / num_large_found_4 = " << num_veto_found_4 << " / " << num_large_found_4 << " = " << veto_det_ratio_4 << endl;
 
-    cout << "\n" << "801-1000 ph.e.:  num_veto_found_5 / num_large_found_5 = " << num_veto_found_5 << " / " << num_large_found_5 << " = " << veto_det_ratio_5 << endl;
+    cout << "\n" << "Center run " << hour12_run << " 801-1000 ph.e.:  num_veto_found_5 / num_large_found_5 = " << num_veto_found_5 << " / " << num_large_found_5 << " = " << veto_det_ratio_5 << endl;
 
-    cout << "\n" << ">1000 ph.e.: num_veto_found_6 / num_large_found_6 = " << num_veto_found_6 << " / " << num_large_found_6 << " = " << veto_det_ratio_6 << endl;
+    cout << "\n" << "Center run " << hour12_run << " >1000 ph.e.:     num_veto_found_6 / num_large_found_6 = " << num_veto_found_6 << " / " << num_large_found_6 << " = " << veto_det_ratio_6 << endl;
 
     // cout << "\n" << "1201-1400 ph.e.: num_veto_found_7 / num_large_found_7 = " << num_veto_found_7 << " / " << num_large_found_7 << " = " << veto_det_ratio_7 << endl;
 
