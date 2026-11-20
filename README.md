@@ -10,3 +10,5 @@ Energy Calibration Procedure:
   2.) SiPM noise pedestal cuts code: main_michels_vp_noise_cuts.cpp
   3.) Minimum muon cuts code: main_min_muons.cpp
   4.) Vertical muon integral correction code: main_vert_muons.cpp
+
+All four calibration codes produce text files that are inputted directly into the core analysis codes.
