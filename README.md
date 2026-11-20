@@ -1,6 +1,8 @@
 # D2O_Code
 All source codes for analysis and unblinding of COHERENT's heavy water Cherenkov detector.
 
+Core analysis code is found in the folder "Analysis_Code." Calibration and correction code is found in the folder "Support_Code." Fitting code used in unblinding is found in the folder "Unblinding_Code."
+
 Before running the core analysis code on newly obtained data, energy calibration and corrections need to be performed on the data. The calibration code is currently set up such that it needs to be run in a specific order, given below.
 
 Energy Calibration Procedure:
